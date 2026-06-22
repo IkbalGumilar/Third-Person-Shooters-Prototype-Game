@@ -153,6 +153,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
     {
         StopRangeFade();
         enemyAI?.SetLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
         SetRangeLayerWeight(1f);
         Vector3 lockedTargetPoint = GetTargetPoint(target);
         Vector3 lockedTargetPosition = target.position;
@@ -164,6 +165,8 @@ public class EnemyRangedWeaponController : MonoBehaviour
 
         PlayRandomShootAnimation();
         PlaySound(currentWeapon.shootSound);
+        yield return null;
+        float animationDuration = GetCurrentAnimationDuration(GetModifiedStat(StatusEffectStat.EnemyRangedAttackCooldown, currentWeapon.attackCooldown));
         float delay = Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedDamageDelay, currentWeapon.damageDelay));
         if (delay > 0f)
         {
@@ -173,7 +176,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
         DealRangedDamage(target, lockedTargetPoint, lockedTargetPosition);
         currentAmmo = Mathf.Max(0, currentAmmo - 1);
 
-        float remaining = Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedAttackCooldown, currentWeapon.attackCooldown) - aimLockDelay - delay);
+        float totalActionDuration = Mathf.Max(
+            GetModifiedStat(StatusEffectStat.EnemyRangedAttackCooldown, currentWeapon.attackCooldown),
+            aimLockDelay + animationDuration
+        );
+        float remaining = Mathf.Max(0f, totalActionDuration - aimLockDelay - delay);
         if (remaining > 0f)
         {
             yield return new WaitForSeconds(remaining);
@@ -188,11 +195,16 @@ public class EnemyRangedWeaponController : MonoBehaviour
     {
         StopRangeFade();
         enemyAI?.SetLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
         SetRangeLayerWeight(1f);
         PlayReloadAnimation();
         PlaySound(currentWeapon.reloadSound);
-
-        yield return new WaitForSeconds(Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedReloadDuration, currentWeapon.reloadDuration)));
+        yield return null;
+        float reloadDuration = Mathf.Max(
+            GetModifiedStat(StatusEffectStat.EnemyRangedReloadDuration, currentWeapon.reloadDuration),
+            GetCurrentAnimationDuration(currentWeapon.reloadDuration)
+        );
+        yield return new WaitForSeconds(reloadDuration);
 
         currentAmmo = Mathf.Max(1, GetModifiedIntStat(StatusEffectStat.EnemyRangedMagazineSize, currentWeapon.magazineSize));
         FadeRangeLayerWeight(0f);
@@ -204,8 +216,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
     {
         StopRangeFade();
         enemyAI?.SetLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
         SetRangeLayerWeight(1f);
         PlayRandomCrossbowMeleeAnimation();
+        yield return null;
+        float animationDuration = GetCurrentAnimationDuration(currentWeapon.crossbowMeleeCooldown);
 
         float delay = Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeDelay, currentWeapon.crossbowMeleeDelay));
         if (delay > 0f)
@@ -215,7 +230,13 @@ public class EnemyRangedWeaponController : MonoBehaviour
 
         DealCrossbowMeleeDamage(target);
 
-        float remaining = Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeCooldown, currentWeapon.crossbowMeleeCooldown) - delay);
+        float remaining = Mathf.Max(
+            0f,
+            Mathf.Max(
+                GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeCooldown, currentWeapon.crossbowMeleeCooldown),
+                animationDuration
+            ) - delay
+        );
         if (remaining > 0f)
         {
             yield return new WaitForSeconds(remaining);
@@ -224,6 +245,22 @@ public class EnemyRangedWeaponController : MonoBehaviour
         FadeRangeLayerWeight(0f);
         enemyAI?.SetLocomotionSuppressed(false);
         attackRoutine = null;
+    }
+
+    float GetCurrentAnimationDuration(float fallbackDuration)
+    {
+        if (animator == null)
+        {
+            return Mathf.Max(0.01f, fallbackDuration);
+        }
+
+        int layerIndex = GetRangeLayerIndex();
+        AnimatorStateInfo nextState = animator.GetNextAnimatorStateInfo(layerIndex);
+        AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(layerIndex);
+        float duration = animator.IsInTransition(layerIndex) && nextState.length > 0f
+            ? nextState.length
+            : currentState.length;
+        return Mathf.Max(0.01f, duration, fallbackDuration);
     }
 
     bool ShouldUseCrossbowMelee(float distanceSqr)

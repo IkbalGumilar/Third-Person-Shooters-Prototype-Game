@@ -90,6 +90,7 @@ public sealed class EnemyHitReactionController : MonoBehaviour
         }
 
         activeLayerIndex = layerIndex;
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
         SetLayerWeight(layerIndex, 1f);
         animator.CrossFadeInFixedTime(stateHash, crossFadeDuration, layerIndex, 0f);
         reactionRoutine = StartCoroutine(FadeReactionAfterState(layerIndex));

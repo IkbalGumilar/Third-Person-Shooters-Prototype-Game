@@ -413,10 +413,7 @@ public class Enemy : MonoBehaviour
         }
 
         animator.speed = 1f;
-        for (int layer = 1; layer < animator.layerCount; layer++)
-        {
-            animator.SetLayerWeight(layer, 0f);
-        }
+        EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
     }
 
     bool HasAnimatorTrigger(string parameterName)
@@ -441,31 +438,106 @@ public class Enemy : MonoBehaviour
 
     bool PlayDeathState()
     {
-        if (animator == null || string.IsNullOrEmpty(deadStateName))
+        if (animator == null)
         {
             return false;
         }
 
-        int layerIndex = animator.GetLayerIndex(deadLayerName);
-        if (layerIndex < 0)
+        if (TryPlayDeathState(deadLayerName, deadStateName))
         {
-            layerIndex = 0;
-        }
-
-        int fullPathHash = Animator.StringToHash($"{deadLayerName}.{deadStateName}");
-        int stateHash = animator.HasState(layerIndex, fullPathHash)
-            ? fullPathHash
-            : Animator.StringToHash(deadStateName);
-
-        if (animator.HasState(layerIndex, stateHash))
-        {
-            // Death owns the full body. Playing it directly prevents an earlier
-            // full-body override layer from blending over the first frames.
-            animator.Play(stateHash, layerIndex, 0f);
             return true;
         }
 
+        if (TryPlayPreferredDeathState())
+        {
+            return true;
+        }
+
+        return TryPlayDeathState("Armed", "Armed-Death1") ||
+               TryPlayDeathState("Unarmed", "Unarmed-Death1");
+    }
+
+    bool TryPlayPreferredDeathState()
+    {
+        if (shieldController != null && shieldController.enabled && shieldController.enableShieldBehavior &&
+            HasPhysicalShield && TryPlayDeathState("Defense", "Shield-Death1"))
+        {
+            return true;
+        }
+
+        if (enemyData != null && enemyData.enemyType == EnemyType.Support &&
+            TryPlayDeathState("2Hand-Staff", "Staff-Death1"))
+        {
+            return true;
+        }
+
+        EnemyRangedWeapon rangedWeapon = rangedWeaponController != null ? rangedWeaponController.CurrentWeapon : null;
+        if (rangedWeapon != null)
+        {
+            if (rangedWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow &&
+                TryPlayDeathState("2Hand-Crossbow", "2Hand-Crossbow-Death1"))
+            {
+                return true;
+            }
+
+            if (rangedWeapon.weaponKind == EnemyRangedWeaponKind.Shotgun &&
+                TryPlayDeathState("2Hand-Shooting", "Shooting-Death1"))
+            {
+                return true;
+            }
+        }
+
+        EnemyMeleeWeapon meleeWeapon = meleeWeaponController != null ? meleeWeaponController.CurrentWeapon : null;
+        if (meleeWeapon != null)
+        {
+            if (meleeWeapon.category == EnemyMeleeWeaponCategory.SmallAxe &&
+                TryPlayDeathState("2Hand-Axe", "2Hand-Axe-Death1"))
+            {
+                return true;
+            }
+
+            if (meleeWeapon.category == EnemyMeleeWeaponCategory.GreatSword &&
+                TryPlayDeathState("2Hand-Sword", "2Hand-Sword-Death1"))
+            {
+                return true;
+            }
+
+            if (meleeWeapon.category == EnemyMeleeWeaponCategory.Spear &&
+                meleeWeapon.holdType == WeaponHoldType.TwoHand &&
+                TryPlayDeathState("2Hand-Spear", "2Hand-Spear-Death1"))
+            {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    bool TryPlayDeathState(string layerName, string stateName)
+    {
+        if (string.IsNullOrEmpty(layerName) || string.IsNullOrEmpty(stateName))
+        {
+            return false;
+        }
+
+        int layerIndex = animator.GetLayerIndex(layerName);
+        if (layerIndex < 0)
+        {
+            return false;
+        }
+
+        int fullPathHash = Animator.StringToHash($"{layerName}.{stateName}");
+        int stateHash = animator.HasState(layerIndex, fullPathHash)
+            ? fullPathHash
+            : Animator.StringToHash(stateName);
+        if (!animator.HasState(layerIndex, stateHash))
+        {
+            return false;
+        }
+
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
+        animator.Play(stateHash, layerIndex, 0f);
+        return true;
     }
 
     void SetEnemyAIEnabled(bool enabled)

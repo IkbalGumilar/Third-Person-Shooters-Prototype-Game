@@ -128,9 +128,12 @@ public class EnemyMeleeWeaponController : MonoBehaviour
         float cooldown = currentWeapon != null ? Mathf.Max(0.01f, GetModifiedStat(StatusEffectStat.EnemyMeleeAttackCooldown, currentWeapon.attackCooldown)) : 0.01f;
         StopAttackFade();
         enemyAI?.SetLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetAttackLayerIndex());
         SetAttackLayerWeight(1f);
         PlayRandomAttackAnimation();
         PlaySound(currentWeapon.attackSound);
+        yield return null;
+        float animationDuration = GetCurrentAnimationDuration(cooldown);
 
         float delay = Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyMeleeDamageDelay, currentWeapon.damageDelay));
         if (delay > 0f)
@@ -140,7 +143,7 @@ public class EnemyMeleeWeaponController : MonoBehaviour
 
         DealDamage(target);
 
-        float remainingAttackTime = Mathf.Max(0f, cooldown - delay);
+        float remainingAttackTime = Mathf.Max(0f, Mathf.Max(cooldown, animationDuration) - delay);
         if (remainingAttackTime > 0f)
         {
             yield return new WaitForSeconds(remainingAttackTime);
@@ -149,6 +152,22 @@ public class EnemyMeleeWeaponController : MonoBehaviour
         FadeAttackLayerWeight(0f);
         enemyAI?.SetLocomotionSuppressed(false);
         attackRoutine = null;
+    }
+
+    float GetCurrentAnimationDuration(float fallbackDuration)
+    {
+        if (animator == null)
+        {
+            return Mathf.Max(0.01f, fallbackDuration);
+        }
+
+        int layerIndex = GetAttackLayerIndex();
+        AnimatorStateInfo nextState = animator.GetNextAnimatorStateInfo(layerIndex);
+        AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(layerIndex);
+        float duration = animator.IsInTransition(layerIndex) && nextState.length > 0f
+            ? nextState.length
+            : currentState.length;
+        return Mathf.Max(0.01f, duration, fallbackDuration);
     }
 
     void DealDamage(Transform target)

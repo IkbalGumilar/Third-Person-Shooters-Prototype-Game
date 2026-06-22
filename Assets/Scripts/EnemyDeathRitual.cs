@@ -77,7 +77,7 @@ public class EnemyDeathRitual : MonoBehaviour
         int layerIndex = animator.GetLayerIndex(animationLayerName);
         if (layerIndex > 0)
         {
-            animator.SetLayerWeight(layerIndex, 0f);
+            EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
         }
 
         enemy.CompleteDeathAfterRitual();
@@ -85,7 +85,7 @@ public class EnemyDeathRitual : MonoBehaviour
 
     IEnumerator DeathRitualRoutine(int layerIndex)
     {
-        animator.SetLayerWeight(layerIndex, 1f);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
         animator.speed = 1f;
         PlayState(layerIndex, getupStateName, 0f);
         yield return new WaitForSeconds(GetCurrentStateDuration(layerIndex));
@@ -101,7 +101,7 @@ public class EnemyDeathRitual : MonoBehaviour
         yield return new WaitForSecondsRealtime(Mathf.Max(0f, freezeAtBoostEndDuration));
 
         animator.speed = 1f;
-        animator.SetLayerWeight(layerIndex, 0f);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
         ritualRoutine = null;
         enemy.ClearDeathRitualHealth();
         enemy.CompleteDeathAfterRitual();

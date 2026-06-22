@@ -701,7 +701,7 @@ public class EnemyShieldController : MonoBehaviour
         }
 
         StopDefenseFade();
-        animator.SetLayerWeight(layer, 1f);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layer);
         if (activeDefenseStateName == stateName)
         {
             AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(layer);
@@ -932,7 +932,7 @@ public class EnemyShieldController : MonoBehaviour
         }
 
         StopDefenseFade();
-        animator.SetLayerWeight(layer, 1f);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layer);
         animator.Play(stateHash, layer, 0f);
         return true;
     }
@@ -944,13 +944,7 @@ public class EnemyShieldController : MonoBehaviour
             return;
         }
 
-        for (int layer = 1; layer < animator.layerCount; layer++)
-        {
-            if (layer != preservedLayer)
-            {
-                animator.SetLayerWeight(layer, 0f);
-            }
-        }
+        EnemyAnimationLayers.SetExclusiveLayer(animator, preservedLayer);
     }
 
     void SetDefenseLayerWeightImmediate(float weight)

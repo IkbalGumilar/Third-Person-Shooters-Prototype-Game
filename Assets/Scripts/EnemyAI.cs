@@ -1027,11 +1027,8 @@ public class EnemyAI : MonoBehaviour
         }
 
         int layerIndex = GetSupportBuffLayerIndex();
-        if (layerIndex > 0)
-        {
-            StopSupportBuffFade();
-            animator.SetLayerWeight(layerIndex, 1f);
-        }
+        StopSupportBuffFade();
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
 
         int stateHash = GetAnimatorStateHash(layerIndex, supportBuffLayerName, supportBuffStateName);
         if (stateHash != 0)
@@ -1182,6 +1179,7 @@ public class EnemyAI : MonoBehaviour
     {
         StopUnarmedAttackFade();
         SetUnarmedAttackLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetUnarmedAttackLayerIndex());
         SetUnarmedAttackLayerWeight(1f);
         PlayRandomUnarmedAttackAnimation();
 
@@ -1918,29 +1916,67 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        int locomotionLayer = locomotionSuppressionCount == 0
+            ? GetPreferredLocomotionLayerIndex()
+            : -1;
+
+        // Enemy layers are all full-body overrides. Keeping exactly one
+        // overlay active prevents locomotion from hiding an action layer.
+        EnemyAnimationLayers.SetExclusiveLayer(animator, locomotionLayer);
+    }
+
+    int GetPreferredLocomotionLayerIndex()
+    {
         bool hasMeleeWeapon = meleeWeaponController != null &&
                               (meleeWeaponController.CurrentWeapon != null || meleeWeaponController.startingWeapon != null);
         bool hasRangedWeapon = rangedWeaponController != null &&
                                (rangedWeaponController.CurrentWeapon != null || rangedWeaponController.startingWeapon != null);
 
-        bool showLocomotion = locomotionSuppressionCount == 0;
-        int armedLayer = animator.GetLayerIndex(armedLocomotionLayerName);
-        if (armedLayer >= 0)
+        string preferredLayerName;
+        if (hasRangedWeapon)
         {
-            animator.SetLayerWeight(armedLayer, showLocomotion && hasMeleeWeapon && !hasRangedWeapon ? 1f : 0f);
+            EnemyRangedWeapon rangedWeapon = rangedWeaponController.CurrentWeapon != null
+                ? rangedWeaponController.CurrentWeapon
+                : rangedWeaponController.startingWeapon;
+            preferredLayerName = rangedWeapon != null
+                ? rangedWeapon.weaponKind switch
+                {
+                    EnemyRangedWeaponKind.Crossbow => "2Hand-Crossbow-Locomotion",
+                    EnemyRangedWeaponKind.Shotgun => shootingLocomotionLayerName,
+                    _ => armedLocomotionLayerName
+                }
+                : shootingLocomotionLayerName;
+        }
+        else if (hasMeleeWeapon)
+        {
+            EnemyMeleeWeapon meleeWeapon = meleeWeaponController.CurrentWeapon != null
+                ? meleeWeaponController.CurrentWeapon
+                : meleeWeaponController.startingWeapon;
+            preferredLayerName = meleeWeapon != null
+                ? meleeWeapon.category switch
+                {
+                    EnemyMeleeWeaponCategory.SmallAxe => "2Hand-Axe-Locomotion",
+                    EnemyMeleeWeaponCategory.GreatSword => "2Hand-Sword-Locomotion",
+                    EnemyMeleeWeaponCategory.Spear when meleeWeapon.holdType == WeaponHoldType.TwoHand => "2Hand-Spear-Locomotion",
+                    _ => armedLocomotionLayerName
+                }
+                : armedLocomotionLayerName;
+        }
+        else
+        {
+            preferredLayerName = unarmedLocomotionLayerName;
         }
 
-        int shootingLayer = animator.GetLayerIndex(shootingLocomotionLayerName);
-        if (shootingLayer >= 0)
+        int preferredLayer = animator.GetLayerIndex(preferredLayerName);
+        if (preferredLayer >= 0)
         {
-            animator.SetLayerWeight(shootingLayer, showLocomotion && hasRangedWeapon ? 1f : 0f);
+            return preferredLayer;
         }
 
-        int unarmedLayer = animator.GetLayerIndex(unarmedLocomotionLayerName);
-        if (unarmedLayer >= 0)
-        {
-            animator.SetLayerWeight(unarmedLayer, showLocomotion && !hasMeleeWeapon && !hasRangedWeapon ? 1f : 0f);
-        }
+        string fallbackLayerName = hasRangedWeapon
+            ? shootingLocomotionLayerName
+            : hasMeleeWeapon ? armedLocomotionLayerName : unarmedLocomotionLayerName;
+        return animator.GetLayerIndex(fallbackLayerName);
     }
 
     public void SetLocomotionSuppressed(bool suppressed)
