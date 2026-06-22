@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36b4abf5410d4d658ab082ad8521b353, type: 3}
+  m_Name: One Hand Melee
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeData
+  meleeName: One Hand Melee
+  holdType: 0
+  animationLayerName: 1Hand-Sword
+  attackStateNames:
+  - Sword-Attack-R1
+  - Sword-Attack-R2
+  - Sword-Attack-R3
+  animationDuration: 0.65
+  cooldown: 0.5
+  crossFade: 0.06
+  damage: 4
+  range: 1.25
+  hitRadius: 0.25
+  damageDelay: 0.18
+  criticalChance: 10
+  criticalDamagePercent: 50
+  knockbackChance: 10
+  knockbackPower: 45
+  maxKnockbackDistance: 0.8
+  knockbackDuration: 0.15
+  frontAngle: 80
+  autoAimRange: 5
+  autoAimMaxStep: 1
+  autoAimStopDistance: 1
+  autoAimSpeed: 8
+  attackSound: {fileID: 0}
+  hitSound: {fileID: 0}
+  attackSounds:
+  - {fileID: 8300000, guid: e9dacf5b24576e946a38e3b8a5fe242a, type: 3}
+  - {fileID: 8300000, guid: e9dacf5b24576e946a38e3b8a5fe242a, type: 3}
+  - {fileID: 8300000, guid: 57b6304068f70f246a7f5b27e0c4000a, type: 3}
+  - {fileID: 8300000, guid: 57679c85365a77f4d86797174670f608, type: 3}
+  - {fileID: 8300000, guid: d929e4dcdc7eda14fb4949828a941203, type: 3}
+  - {fileID: 8300000, guid: f0e9eeeedfa5a0f48976fbdfa4f390b9, type: 3}
+  hitSounds: []
+  hitEffect: {fileID: 0}
+  criticalHitEffect: {fileID: 0}

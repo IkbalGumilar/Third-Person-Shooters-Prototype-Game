@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 930fa5cd2321fed068e15c2255706267, type: 3}
+  m_Name: Energy Drink
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryItemData
+  itemName: Inventory Item
+  itemType: 0
+  icon: {fileID: 21300000, guid: 3aca7be3f81a1264da3153180f85f0f8, type: 3}
+  itemPrefab: {fileID: 1149228415850819293, guid: ef4c37a8017cefb7ca0ad9eb9b6b6d5e, type: 3}
+  maxStack: 99
+  inventoryWidth: 1
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  description: Minuman energi untuk memulihkan stamina.
+  weapon: {fileID: 0}
+  ammoType: Default
+  caliber: 
+  ammoAmount: 1
+  healAmount: 25
+  useDuration: 0
+  statusEffects:
+  - {fileID: 11400000, guid: 1abbe3c28c254405a7510c1d0b31da55, type: 2}
+  consumeOnUse: 1

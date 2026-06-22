@@ -1,0 +1,35 @@
+# Unity generated files
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# Unity crash reports
+sysinfo.txt
+
+# Visual Studio / VSCode
+.vs/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# JetBrains
+.idea/
+
+# Burst cache
+[Bb]urst[Cc]ache/
+
+# Packages lock file (optional, can be committed if needed)
+# Packages/packages-lock.json

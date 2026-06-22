@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36b4abf5410d4d658ab082ad8521b353, type: 3}
+  m_Name: One Hand Physical Melee
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeData
+  meleeName: One Hand Physical Melee
+  holdType: 0
+  animationLayerName: Armed-Melee
+  attackStateNames:
+  - Armed-Attack-Kick-L1
+  - Armed-Attack-Kick-L2
+  - Armed-Attack-Kick-R1
+  - Armed-Attack-Kick-R2
+  animationDuration: 0.55
+  cooldown: 0.45
+  crossFade: 0.06
+  damage: 3
+  range: 1.15
+  hitRadius: 0.25
+  damageDelay: 0.16
+  criticalChance: 5
+  criticalDamagePercent: 40
+  knockbackChance: 10
+  knockbackPower: 40
+  maxKnockbackDistance: 0.7
+  knockbackDuration: 0.15
+  frontAngle: 80
+  autoAimRange: 5
+  autoAimMaxStep: 1
+  autoAimStopDistance: 1
+  autoAimSpeed: 8
+  attackSound: {fileID: 0}
+  hitSound: {fileID: 0}
+  attackSounds: []
+  hitSounds: []
+  hitEffect: {fileID: 0}
+  criticalHitEffect: {fileID: 0}

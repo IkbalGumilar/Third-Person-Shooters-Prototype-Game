@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f62ae4ee047432f95bec281f97951f5, type: 3}
+  m_Name: BasicEnemy
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyName: Basic Enemy
+  enemyType: 0
+  maxHealth: 100
+  penetrationResistance: 10
+  criticalResistance: 0
+  stunResistance: 0
+  knockbackResistance: 0
+  canBeStunned: 1
+  canBeKnockedBack: 1
+  moveSpeed: 2
+  autoAddNavMeshAgent: 1
+  useRandomPatrolWhenNoPoints: 1
+  randomPatrolRadius: 6
+  detectionRange: 10
+  loseTargetRange: 14
+  shotAlertRangeMultiplier: 3
+  shotAlertShareRadius: 5
+  shotAlertMinDuration: 5
+  shotAlertMaxDuration: 60
+  idleDuration: 2
+  patrolSpeed: 2
+  chaseSpeed: 4
+  stoppingDistance: 0.85
+  waypointReachDistance: 0.6
+  faceMoveDirection: 1
+  rotationSpeed: 8
+  attackDamage: 10
+  attackRange: 0.9
+  attackCooldown: 1
+  attackWindup: 0.35
+  attackHitRadius: 0.25
+  attackCriticalChance: 5
+  attackCriticalDamagePercent: 50
+  attackKnockbackChance: 8
+  attackKnockbackPower: 30
+  attackMaxKnockbackDistance: 0.7
+  attackKnockbackDuration: 0.15
+  deathEffect: {fileID: 0}
+  hitSound: {fileID: 8300000, guid: 0ae69ea2a9ba3af44866512d3f502222, type: 3}
+  deathSound: {fileID: 8300000, guid: d5ab0e5b27b98be4f9accf8c2125fdfb, type: 3}

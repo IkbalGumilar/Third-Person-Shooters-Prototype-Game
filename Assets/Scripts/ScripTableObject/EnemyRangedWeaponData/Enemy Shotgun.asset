@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c052a18643561bbac92c7a0501f5ea12, type: 3}
+  m_Name: Enemy Shotgun
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyRangedWeapon
+  weaponName: Enemy Shotgun
+  weaponKind: 3
+  weaponPrefab: {fileID: 1049767121806783314, guid: 61d2e9f1bcba672559cf04d7d5432d91, type: 3}
+  damage: 20
+  attackRange: 5
+  attackCooldown: 1
+  damageDelay: 0.18
+  magazineSize: 12
+  reloadDuration: 1
+  pelletCount: 6
+  spreadAngle: 5
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  requireLineOfSight: 1
+  aimLockDelayRange: {x: 0.25, y: 0.45}
+  aimTargetHeight: 1
+  allowDirectHitFallback: 0
+  allowStationaryTargetFallback: 0
+  stationaryFallbackMoveTolerance: 0.15
+  eliteAndMiniBossUseDualPistol: 1
+  miniBossAndBossOnly: 1
+  bossCanUseCrossbowMelee: 1
+  crossbowMeleeRange: 1.8
+  crossbowMeleeDamage: 12
+  crossbowMeleeDelay: 0.25
+  crossbowMeleeCooldown: 1
+  rangeLayerName: 2Hand-Shooting
+  handgunShootStateNames:
+  - 1 pistol 1
+  - 1 pistol 2
+  - 1 pistol 3
+  handgunReloadStateName: 1 pistol Reload
+  dualPistolShootStateNames:
+  - 2 pistol 1
+  - 2 pistol 2
+  - 2 pistol 3
+  dualPistolReloadStateNames:
+  - 2 pistol Reload 1
+  - 2 pistol Reload  2
+  crossbowShootStateNames:
+  - Crossbow 1
+  - Crossbow 2
+  - Crossbow 3
+  - Crossbow 4
+  - Crossbow 5
+  - Crossbow 6
+  crossbowReloadStateName: Crossbow Reload
+  crossbowMeleeStateNames:
+  - Crossbow Kick 1
+  - Crossbow Kick 2
+  - Crossbow Kick 3
+  - Crossbow Kick 4
+  shotgunShootStateNames:
+  - Shooting-Fire-Rifle1
+  - Shooting-Fire-Rifle2
+  - Shooting-Attack1
+  shotgunReloadStateName: Shooting-Reload-Start
+  animationCrossFade: 0.08
+  holdPosition: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
+  holdScale: {x: 1, y: 1, z: 1}
+  shootSound: {fileID: 8300000, guid: 385c948edeb1b5e458ba7de33a488d82, type: 3}
+  reloadSound: {fileID: 8300000, guid: 7630a6ca744bf8a489a81e5a7b9ab912, type: 3}
+  hitSound: {fileID: 0}

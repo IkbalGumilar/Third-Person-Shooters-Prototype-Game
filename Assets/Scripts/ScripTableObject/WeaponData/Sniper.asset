@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a4ec0f630515e660a4bea24ab3556bc, type: 3}
+  m_Name: Sniper
+  m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  weaponName: Sniper
+  holdType: 1
+  weaponPrefab: {fileID: 873441644954853801, guid: 35b3d253e034e99a0b09bbfd68eb9836, type: 3}
+  inventoryIcon: {fileID: 21300000, guid: e464eda6125399f15b0e8c77a0bf6adc, type: 3}
+  displayName: Sniper
+  description: Senapan jarak jauh dengan damage tinggi.
+  inventoryWidth: 3
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  damage: 40
+  range: 100
+  fireRate: 5
+  Auto: 0
+  magazineSize: 1
+  useChamberedRound: 0
+  ammoType: Rifle
+  caliber: 7.62mm x 63mm
+  reloadTime: 2
+  allowManualReload: 0
+  autoReloadOnEmpty: 1
+  autoReloadDelay: 0.5
+  fullDamageRange: 80
+  zeroDamageRangePercent: 250
+  penetrationPower: 80
+  criticalChance: 35
+  criticalDamagePercent: 100
+  stunChance: 25
+  stunDuration: 0.6
+  knockbackChance: 25
+  knockbackPower: 70
+  maxKnockbackDistance: 2
+  knockbackDuration: 0.15
+  useSpread: 0
+  pelletCount: 1
+  spreadAngle: 0
+  hasScope: 1
+  useCinemachineScopeCamera: 1
+  scopedFov: 10
+  scopedSensitivityMultiplier: 0.25
+  scopeOverlayPrefab: {fileID: 0}
+  hideWeaponWhenScoped: 0
+  recoilPerShot: {x: 0.055, y: 0.18}
+  recoilSnappiness: 20
+  recoilReturnSpeed: 7
+  maxRecoilOffset: 0.45
+  holdPosition: {x: 0.058105513, y: 0.028597465, z: -0.059678566}
+  holdRotation: {x: 3.157, y: 113.33, z: -106.294}
+  holdScale: {x: 1, y: 1, z: 1}
+  aimHoldPosition: {x: 0.058105513, y: 0.028597465, z: -0.059678566}
+  aimHoldRotation: {x: 3.157, y: 113.33, z: -106.294}
+  animationLayerName: 2Hand-Shooting-Aim
+  shootLayerName: 2Hand-Shooting-Fire
+  reloadLayerName: 2Hand-Shooting-Reload
+  switchLayerName: 2Hand-Shooting-Equip-Interact
+  aimStateName: Shooting-Aiming-CM
+  switchInStateName: Shooting-Unsheath-Hips-Relax
+  switchDuration: 0.5
+  shootStateName: Shooting-Aiming-Fire-CM
+  shootAnimationDuration: 0.12
+  reloadType: 2
+  reloadStateName: Shooting-Reload-Start
+  shotgunReloadStartStateName: Shooting-Reload-Start
+  shotgunReloadInsertStateName: Shooting-Reload-Insert
+  shotgunReloadEndStateName: Shooting-Reload-end
+  reloadStartDuration: 0
+  reloadInsertDuration: 0
+  reloadEndDuration: 0
+  bulletShell: {fileID: 3617055956727371381, guid: 784759db95f89a7c8910f209544a0c2e, type: 3}
+  muzzleFlash: {fileID: 1198663731479534, guid: b46264f9e12caed4cb53e7c2ad64aa54, type: 3}
+  impactEffect: {fileID: 1180248314969840, guid: 101d62f0a3e4fef4eab61adb79c845df, type: 3}
+  enemyHitEffect: {fileID: 1026642433091512, guid: ed67c2cb8e3a7fb418c6fbb1b001dce2, type: 3}
+  criticalHitEffect: {fileID: 1489431029902184, guid: 4430919f14c50f84085d287cbcb2c30e, type: 3}
+  fireSound: {fileID: 8300000, guid: 932364e3fd12d174eb96a5bb6a780e6f, type: 3}
+  reloadSound: {fileID: 8300000, guid: b12d136bcddff534fae256e575886f59, type: 3}
+  emptyAmmoSound: {fileID: 0}

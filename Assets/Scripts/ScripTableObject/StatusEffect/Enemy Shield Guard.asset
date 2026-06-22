@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 382396b10629fc61183e4c11d261296f, type: 3}
+  m_Name: Enemy Shield Guard
+  m_EditorClassIdentifier: Assembly-CSharp::StatusEffectData
+  effectName: Shield Guard
+  kind: 0
+  target: 2
+  description: Poin shield fisik dari musuh pelindung.
+  statusIcon: {fileID: 21300000, guid: 863d316d976504fc5a3734b33e10c55e, type: 3}
+  iconTint: {r: 0.35, g: 0.65, b: 1, a: 1}
+  showInStatusHud: 1
+  permanent: 1
+  duration: 0
+  tickInterval: 1
+  removeOnDeath: 1
+  removeWhenPhysicalShieldDepleted: 1
+  healthDamageCanKill: 1
+  healthDamageTriggersDamagedEvent: 0
+  healthDamageRegenClampsToCurrentHealth: 1
+  stackMode: 1
+  maxStacks: 0
+  multiplyModifierByStacks: 0
+  blocksMovement: 0
+  blocksJump: 0
+  blocksRun: 0
+  blocksShooting: 0
+  blocksReload: 0
+  blocksAiming: 0
+  hidesWeapon: 0
+  modifiers: []
+  startEffectPrefab: {fileID: 0}
+  tickEffectPrefab: {fileID: 0}
+  endEffectPrefab: {fileID: 0}
+  startSound: {fileID: 0}
+  tickSound: {fileID: 0}
+  endSound: {fileID: 0}

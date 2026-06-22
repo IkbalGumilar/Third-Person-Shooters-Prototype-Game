@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36b4abf5410d4d658ab082ad8521b353, type: 3}
+  m_Name: Two Hand Physical Melee
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeData
+  meleeName: Two Hand Physical Melee
+  holdType: 1
+  animationLayerName: 2Hand-Shooting-Melee
+  attackStateNames:
+  - Shooting-Attack-Kick-L2
+  - Shooting-Attack-Kick-R1
+  - Shooting-Attack-Kick-R2
+  animationDuration: 0.65
+  cooldown: 0.5
+  crossFade: 0.06
+  damage: 4
+  range: 1.25
+  hitRadius: 0.28
+  damageDelay: 0.18
+  criticalChance: 8
+  criticalDamagePercent: 50
+  knockbackChance: 25
+  knockbackPower: 60
+  maxKnockbackDistance: 1.1
+  knockbackDuration: 0.2
+  frontAngle: 80
+  autoAimRange: 5
+  autoAimMaxStep: 1
+  autoAimStopDistance: 1
+  autoAimSpeed: 8
+  attackSound: {fileID: 0}
+  hitSound: {fileID: 0}
+  attackSounds: []
+  hitSounds: []
+  hitEffect: {fileID: 0}
+  criticalHitEffect: {fileID: 0}

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 930fa5cd2321fed068e15c2255706267, type: 3}
+  m_Name: Medical Spray
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryItemData
+  itemName: Medical Spray
+  itemType: 2
+  icon: {fileID: 21300000, guid: b677701c088ee8726bafd1630615f77e, type: 3}
+  itemPrefab: {fileID: 8887899401392499494, guid: 7e78171fcf562b72181af27abe07a67b, type: 3}
+  maxStack: 99
+  inventoryWidth: 1
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  description: Menyemprotkan obat untuk pemulihan cepat.
+  weapon: {fileID: 0}
+  ammoType: Default
+  caliber: 
+  ammoAmount: 1
+  healAmount: 25
+  useDuration: 0
+  statusEffects:
+  - {fileID: 11400000, guid: 7cffc72a698042dea7d0fc610702cb71, type: 2}
+  consumeOnUse: 1

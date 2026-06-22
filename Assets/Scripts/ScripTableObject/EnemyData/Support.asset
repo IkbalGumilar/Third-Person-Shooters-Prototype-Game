@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f62ae4ee047432f95bec281f97951f5, type: 3}
+  m_Name: Support
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyName: Support
+  enemyType: 8
+  maxHealth: 80
+  penetrationResistance: 10
+  criticalResistance: 5
+  stunResistance: 20
+  knockbackResistance: 10
+  canBeStunned: 1
+  canBeKnockedBack: 1
+  moveSpeed: 2
+  autoAddNavMeshAgent: 1
+  useRandomPatrolWhenNoPoints: 1
+  randomPatrolRadius: 6
+  detectionRange: 12
+  loseTargetRange: 18
+  shotAlertRangeMultiplier: 3
+  shotAlertShareRadius: 8
+  shotAlertMinDuration: 5
+  shotAlertMaxDuration: 60
+  idleDuration: 2
+  patrolSpeed: 2
+  chaseSpeed: 4.5
+  stoppingDistance: 1
+  waypointReachDistance: 0.6
+  faceMoveDirection: 1
+  rotationSpeed: 8
+  useSupportBehavior: 1
+  supportAllySearchRadius: 14
+  supportBehindAllyDistance: 3
+  supportFrontlineBuffer: 1.25
+  supportFleeDistanceFromPlayer: 20
+  supportRepositionOnDamageDuration: 3
+  supportDestinationRefreshInterval: 0.35
+  attackDamage: 5
+  attackRange: 0.9
+  attackCooldown: 1.2
+  attackWindup: 0.35
+  attackHitRadius: 0.25
+  attackCriticalChance: 5
+  attackCriticalDamagePercent: 50
+  attackKnockbackChance: 5
+  attackKnockbackPower: 25
+  attackMaxKnockbackDistance: 0.6
+  attackKnockbackDuration: 0.12
+  hitStatusEffects: []
+  attackStatusEffectChance: 0
+  attackStatusEffects: []
+  deathEffect: {fileID: 0}
+  hitSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  growlSound: {fileID: 0}
+  angryGrowlSound: {fileID: 0}
+  growlMinInterval: 5
+  growlMaxInterval: 12
+  angryGrowlMinInterval: 3
+  angryGrowlMaxInterval: 8
+  voiceVolume: 1

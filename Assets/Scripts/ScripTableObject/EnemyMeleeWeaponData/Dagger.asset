@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8443c7a1a94f748a65df9dd2fa1f34, type: 3}
+  m_Name: Dagger
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMeleeWeapon
+  weaponName: Dagger
+  category: 1
+  holdType: 0
+  weaponPrefab: {fileID: 72073669521963761, guid: 1f48e58c92226fb90925a19f29dacee2, type: 3}
+  damage: 8
+  attackRange: 0.95
+  attackCooldown: 0.7
+  damageDelay: 0.25
+  hitRadius: 0.25
+  criticalChance: 20
+  criticalDamagePercent: 50
+  knockbackChance: 5
+  knockbackPower: 20
+  maxKnockbackDistance: 0.5
+  knockbackDuration: 0.12
+  attackStateNames:
+  - Dagger-Attack-L1
+  - Dagger-Attack-R1
+  - Dagger-Attack-L2
+  attackCrossFade: 0.06
+  holdPosition: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
+  holdScale: {x: 1, y: 1, z: 1}
+  attackSound: {fileID: 0}
+  hitSound: {fileID: 0}

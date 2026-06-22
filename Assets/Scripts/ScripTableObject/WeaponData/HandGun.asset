@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a4ec0f630515e660a4bea24ab3556bc, type: 3}
+  m_Name: HandGun
+  m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  weaponName: HandGun
+  holdType: 0
+  weaponPrefab: {fileID: 5713825683808543829, guid: afc4ba165bdbc6ff789ad6b8ab0617e4, type: 3}
+  inventoryIcon: {fileID: 21300000, guid: 951a94e047fa59f7aacdc773b8facf87, type: 3}
+  displayName: Handgun
+  description: Pistol ringan untuk tembakan cepat jarak dekat.
+  inventoryWidth: 1
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  damage: 10
+  range: 25
+  fireRate: 3
+  Auto: 0
+  magazineSize: 20
+  useChamberedRound: 1
+  ammoType: Small
+  caliber: 5.6 x 15mm
+  reloadTime: 2
+  allowManualReload: 1
+  autoReloadOnEmpty: 0
+  autoReloadDelay: 0.5
+  fullDamageRange: 25
+  zeroDamageRangePercent: 150
+  penetrationPower: 10
+  criticalChance: 10
+  criticalDamagePercent: 50
+  stunChance: 0
+  stunDuration: 0.5
+  knockbackChance: 0
+  knockbackPower: 0
+  maxKnockbackDistance: 2
+  knockbackDuration: 0.15
+  useSpread: 0
+  pelletCount: 1
+  spreadAngle: 0
+  hasScope: 1
+  scopedFov: 50
+  scopedSensitivityMultiplier: 1
+  scopeOverlayPrefab: {fileID: 0}
+  hideWeaponWhenScoped: 0
+  recoilPerShot: {x: 0.025, y: 0.08}
+  recoilSnappiness: 22
+  recoilReturnSpeed: 11
+  maxRecoilOffset: 0.25
+  holdPosition: {x: 0.017, y: -0.026, z: 0.006}
+  holdRotation: {x: 26.87, y: 0, z: 0}
+  holdScale: {x: 1, y: 1, z: 1}
+  aimHoldPosition: {x: 0, y: 0, z: 0}
+  aimHoldRotation: {x: 0, y: 0, z: 0}
+  animationLayerName: Armed-Pistol-Idle
+  shootLayerName: 1Hand-Pistol-Single-Fire
+  reloadLayerName: 1Hand-Pistol-Reload
+  switchLayerName: Armed-Equip-Switch
+  aimStateName: Armed-Idle-Pistol-R-Static
+  switchInStateName: Armed-WeaponSwitch-R-Hips
+  switchDuration: 0.5
+  shootStateName: Pistol-Attack-R1
+  shootAnimationDuration: 0.12
+  reloadType: 0
+  reloadStateName: Pistol-Reload-R1
+  shotgunReloadStartStateName: Shooting-Reload-Start
+  shotgunReloadInsertStateName: Shooting-Reload-Insert
+  shotgunReloadEndStateName: Shooting-Reload-end
+  reloadStartDuration: 0
+  reloadInsertDuration: 0
+  reloadEndDuration: 0
+  bulletShell: {fileID: 3617055956727371381, guid: 784759db95f89a7c8910f209544a0c2e, type: 3}
+  muzzleFlash: {fileID: 1198663731479534, guid: b46264f9e12caed4cb53e7c2ad64aa54, type: 3}
+  impactEffect: {fileID: 1180248314969840, guid: 101d62f0a3e4fef4eab61adb79c845df, type: 3}
+  enemyHitEffect: {fileID: 1026642433091512, guid: ed67c2cb8e3a7fb418c6fbb1b001dce2, type: 3}
+  criticalHitEffect: {fileID: 1489431029902184, guid: 4430919f14c50f84085d287cbcb2c30e, type: 3}
+  fireSound: {fileID: 8300000, guid: 4d6bc5b0c52c2694e9950f31ae049a0f, type: 3}
+  reloadSound: {fileID: 8300000, guid: 7630a6ca744bf8a489a81e5a7b9ab912, type: 3}
+  emptyAmmoSound: {fileID: 0}

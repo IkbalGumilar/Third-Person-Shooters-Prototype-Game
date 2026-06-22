@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a4ec0f630515e660a4bea24ab3556bc, type: 3}
+  m_Name: Revolver
+  m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  weaponName: Revolver
+  holdType: 0
+  weaponPrefab: {fileID: 3087289023561422517, guid: 650b5bdf399d5d8369a33dd376f011a4, type: 3}
+  inventoryIcon: {fileID: 21300000, guid: 36306f343bb75edb6b6d509ad01af88e, type: 3}
+  displayName: Revover
+  description: Pistol kuat dengan tembakan manual.
+  inventoryWidth: 1
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  damage: 35
+  range: 25
+  fireRate: 1
+  Auto: 0
+  magazineSize: 8
+  useChamberedRound: 0
+  ammoType: Handgun
+  caliber: 11 x 33mm
+  reloadTime: 2
+  allowManualReload: 1
+  autoReloadOnEmpty: 0
+  autoReloadDelay: 0.5
+  fullDamageRange: 25
+  zeroDamageRangePercent: 150
+  penetrationPower: 25
+  criticalChance: 20
+  criticalDamagePercent: 75
+  stunChance: 5
+  stunDuration: 0.35
+  knockbackChance: 10
+  knockbackPower: 30
+  maxKnockbackDistance: 2
+  knockbackDuration: 0.15
+  useSpread: 0
+  pelletCount: 1
+  spreadAngle: 0
+  hasScope: 1
+  scopedFov: 50
+  scopedSensitivityMultiplier: 1
+  scopeOverlayPrefab: {fileID: 0}
+  hideWeaponWhenScoped: 0
+  recoilPerShot: {x: 0.035, y: 0.13}
+  recoilSnappiness: 26
+  recoilReturnSpeed: 8
+  maxRecoilOffset: 0.35
+  useBodyRecoil: 1
+  bodyRecoilPerShot: {x: 1.8, y: 4.2}
+  maxBodyRecoilAngle: 24
+  bodyRecoilSnappiness: 24
+  bodyRecoilReturnSpeed: 8
+  bodyRecoilImmediateResponse: 1
+  oneHandUpperBodyRecoilScale: 0
+  twoHandUpperBodyRecoilScale: 1
+  oneHandShoulderRecoilScale: 1.35
+  oneHandUpperArmRecoilScale: 0.45
+  oneHandElbowRecoilScale: 2.8
+  bodyRecoilSpineWeight: 0.24
+  bodyRecoilChestWeight: 0.48
+  bodyRecoilUpperChestWeight: 0.63
+  bodyRecoilRightClavicleWeight: 1.25
+  bodyRecoilLeftClavicleWeight: 0.45
+  bodyRecoilRightUpperArmWeight: 0.9
+  bodyRecoilRightLowerArmWeight: 1
+  bodyRecoilLeftUpperArmWeight: 0.25
+  bodyRecoilLeftLowerArmWeight: 0.15
+  holdPosition: {x: 0.019, y: -0.025, z: -0.007}
+  holdRotation: {x: 26.244, y: 0, z: 0}
+  holdScale: {x: 1, y: 1, z: 1}
+  aimHoldPosition: {x: 0, y: 0, z: 0}
+  aimHoldRotation: {x: 0, y: 0, z: 0}
+  useAimIK: 1
+  aimIKWeight: 1
+  aimIKBodyWeight: 0.28
+  aimIKHeadWeight: 0.65
+  aimIKRightHandWeight: 1
+  aimIKRightHandRotationOffset: {x: 0, y: 0, z: 0}
+  aimIKLeftHandWeight: 0.75
+  animationLayerName: Armed-Pistol-Idle
+  shootLayerName: 1Hand-Pistol-Single-Fire
+  reloadLayerName: 1Hand-Pistol-Reload
+  switchLayerName: Armed-Equip-Switch
+  aimStateName: Armed-Idle-Pistol-R-Static
+  switchInStateName: Armed-WeaponSwitch-R-Hips
+  switchDuration: 0.5
+  shootStateName: Pistol-Attack-R2
+  shootAnimationDuration: 0.12
+  reloadType: 0
+  reloadStateName: Pistol-Reload-R1
+  shotgunReloadStartStateName: Shooting-Reload-Start
+  shotgunReloadInsertStateName: Shooting-Reload-Insert
+  shotgunReloadEndStateName: Shooting-Reload-end
+  reloadStartDuration: 0
+  reloadInsertDuration: 0
+  reloadEndDuration: 0
+  bulletShell: {fileID: 3617055956727371381, guid: 784759db95f89a7c8910f209544a0c2e, type: 3}
+  muzzleFlash: {fileID: 1198663731479534, guid: b46264f9e12caed4cb53e7c2ad64aa54, type: 3}
+  impactEffect: {fileID: 1180248314969840, guid: 101d62f0a3e4fef4eab61adb79c845df, type: 3}
+  enemyHitEffect: {fileID: 1026642433091512, guid: ed67c2cb8e3a7fb418c6fbb1b001dce2, type: 3}
+  criticalHitEffect: {fileID: 1489431029902184, guid: 4430919f14c50f84085d287cbcb2c30e, type: 3}
+  fireSound: {fileID: 8300000, guid: 65cbf4df25556154e9ccf5fcb8e3daa2, type: 3}
+  reloadSound: {fileID: 8300000, guid: b12d136bcddff534fae256e575886f59, type: 3}
+  emptyAmmoSound: {fileID: 0}

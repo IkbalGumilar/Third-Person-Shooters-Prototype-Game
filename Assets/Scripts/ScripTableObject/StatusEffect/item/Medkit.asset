@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 930fa5cd2321fed068e15c2255706267, type: 3}
+  m_Name: Medkit
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryItemData
+  itemName: Medkit
+  itemType: 2
+  icon: {fileID: 21300000, guid: 60f2e5c0bdad8374aa70fbe65da128b9, type: 3}
+  itemPrefab: {fileID: 8171327508505797672, guid: 1bc476647e17e5cb7a227a04b6ca7761, type: 3}
+  maxStack: 32
+  inventoryWidth: 1
+  inventoryHeight: 1
+  canRotateInInventory: 1
+  description: Paket medis untuk memulihkan kesehatan.
+  weapon: {fileID: 0}
+  ammoType: Default
+  caliber: 
+  ammoAmount: 1
+  healAmount: 25
+  useDuration: 0
+  statusEffects:
+  - {fileID: 11400000, guid: 1795023dc35047859ced46b0263b9869, type: 2}
+  consumeOnUse: 1
