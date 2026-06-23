@@ -4,6 +4,49 @@ A Unity third-person shooter prototype focused on data-driven combat, enemy enco
 
 ![Gameplay overview](Photos/gameplay-overview.png)
 
+## Download and Play
+
+The current public build is a pre-release prototype: [Third_Person_Shooters_Prototype_v0.00.001-alpha.1](https://github.com/IkbalGumilar/Third-Person-Shooters-Prototype-Game/releases/tag/v0.00.001-alpha.1).
+
+Download the archive for your operating system. Do not use GitHub's automatically generated `Source code` archives to play the game.
+
+| Platform | Download |
+| --- | --- |
+| Windows x64 | [Download ZIP](https://github.com/IkbalGumilar/Third-Person-Shooters-Prototype-Game/releases/download/v0.00.001-alpha.1/Third_Person_Shooters_Prototype_v0.00.001-alpha.1_Windows_x64.zip) |
+| macOS | [Download ZIP](https://github.com/IkbalGumilar/Third-Person-Shooters-Prototype-Game/releases/download/v0.00.001-alpha.1/Third_Person_Shooters_Prototype_v0.00.001-alpha.1_MacOS.zip) |
+| Linux x64 | [Download ZIP](https://github.com/IkbalGumilar/Third-Person-Shooters-Prototype-Game/releases/download/v0.00.001-alpha.1/Third_Person_Shooters_Prototype_v0.00.001-alpha.1_Linux_x64.zip) |
+
+### Windows x64
+
+1. Download and extract the Windows ZIP to any writable folder.
+2. Keep the executable and its accompanying `_Data` folder together.
+3. Run the included `.exe` file.
+4. If Windows SmartScreen appears, choose `More info` and then `Run anyway` only after confirming the download came from this repository.
+
+### macOS
+
+1. Download and extract the macOS ZIP.
+2. Open the included `.app` bundle.
+3. If macOS blocks the first launch, Control-click the app, select `Open`, then confirm `Open` in the security prompt.
+
+### Linux x64
+
+1. Download and extract the Linux ZIP.
+2. Open a terminal in the extracted folder.
+3. Make the included game executable runnable:
+
+   ```bash
+   chmod +x ./<game-executable>
+   ```
+
+4. Start it from the same folder:
+
+   ```bash
+   ./<game-executable>
+   ```
+
+Replace `<game-executable>` with the executable file included in the extracted build folder.
+
 ## Highlights
 
 - Third-person movement with free-look camera, aiming, crouching, crawling, jumping, rolling, and melee actions.
@@ -80,6 +123,8 @@ Enemy behavior includes patrol, alert, chase, melee and ranged attacks, shield b
 - Lean Pool
 
 ## Getting Started
+
+The following instructions are for opening the Unity project, not for playing a released build. For a playable build, use the downloads above.
 
 1. Clone the repository:
 
