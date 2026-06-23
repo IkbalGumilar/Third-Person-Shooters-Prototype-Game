@@ -23,6 +23,9 @@ public class InventoryGridUI : MonoBehaviour
 {
     const string GeneratedSlotPrefix = "Generated Slot ";
 
+    public static int LastClosedByCancelFrame { get; private set; }
+    public static bool IsAnyInventoryOpen { get; private set; }
+
     [Header("Source")]
     public PlayerWeaponEquip weaponEquip;
     public WeaponInfoUI weaponInfoUI;
@@ -152,6 +155,7 @@ public class InventoryGridUI : MonoBehaviour
         kontrolPemain?.Disable();
         UnsubscribePlayerHealth();
         SetControlsFrozen(false);
+        IsAnyInventoryOpen = false;
     }
 
     void OnDestroy()
@@ -180,6 +184,7 @@ public class InventoryGridUI : MonoBehaviour
         if (isOpen && closeKey != KeyCode.None && IsInventoryClosePressedThisFrame())
         {
             SetOpen(false);
+            LastClosedByCancelFrame = Time.frameCount;
             return;
         }
 
@@ -300,6 +305,7 @@ public class InventoryGridUI : MonoBehaviour
             CloseContextMenu();
         }
 
+        IsAnyInventoryOpen = open;
         SetControlsFrozen(open && freezeControlsWhenOpen);
     }
 

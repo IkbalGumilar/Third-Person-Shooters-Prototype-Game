@@ -7,6 +7,8 @@ public class CameraControler : MonoBehaviour
     public bool allowLookInput = true;
     public bool requireLockedHiddenCursorForLook = true;
     public float lookSensitivity = 8f;
+    [Range(0.1f, 5f)] public float cameraSensitivityMultiplier = 1f;
+    [Range(0.1f, 5f)] public float aimSensitivityMultiplier = 1f;
     public float sensitivityMultiplier = 1f;
     [HideInInspector] public float scopeSensitivityMultiplier = 1f;
     public PlayerWeaponAnimator weaponAnimator;
@@ -99,6 +101,12 @@ public class CameraControler : MonoBehaviour
     {
         kontrolPemain?.Dispose();
         kontrolPemain = null;
+    }
+
+    public void SetPlayerSensitivityMultipliers(float cameraMultiplier, float aimMultiplier)
+    {
+        cameraSensitivityMultiplier = Mathf.Clamp(cameraMultiplier, 0.1f, 5f);
+        aimSensitivityMultiplier = Mathf.Clamp(aimMultiplier, 0.1f, 5f);
     }
 
     void Start()
@@ -194,7 +202,8 @@ public class CameraControler : MonoBehaviour
         Vector2 lookInput = kontrolPemain != null
             ? kontrolPemain.Pemain.Tampak.ReadValue<Vector2>()
             : Vector2.zero;
-        float currentSensitivity = lookSensitivity * sensitivityMultiplier * scopeSensitivityMultiplier;
+        float userSensitivityMultiplier = IsAimActive() ? aimSensitivityMultiplier : cameraSensitivityMultiplier;
+        float currentSensitivity = lookSensitivity * sensitivityMultiplier * userSensitivityMultiplier * scopeSensitivityMultiplier;
         targetYaw += lookInput.x * currentSensitivity * Time.deltaTime;
         targetPitch -= lookInput.y * currentSensitivity * Time.deltaTime;
         targetPitch = Mathf.Clamp(targetPitch, minVerticalAngle, maxVerticalAngle);

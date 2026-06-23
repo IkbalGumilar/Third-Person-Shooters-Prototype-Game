@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using Unity.Cinemachine;
 
 public class PlayerHealth : MonoBehaviour
@@ -39,6 +40,8 @@ public class PlayerHealth : MonoBehaviour
     public string twoHandDeathStateName = "Shooting-Death1";
     public float deadFadeDuration = 0.1f;
     public float deadStopDelay = 12f;
+    [Tooltip("Scene loaded after the death UI timeout or confirmation input.")]
+    public string deathReturnSceneName = "MainMenu";
     public bool disableControlOnDeath = true;
     public Transform deathCameraTransform;
     public Vector3 deathCameraLookOffset = new Vector3(0f, 1.2f, 0f);
@@ -545,7 +548,7 @@ public class PlayerHealth : MonoBehaviour
         {
             if (allowAnyKeyExitOnDeath && elapsed >= inputDelay && IsDeathConfirmPressedThisFrame())
             {
-                StopPlayMode();
+                ReturnToMainMenu();
                 yield break;
             }
 
@@ -553,7 +556,7 @@ public class PlayerHealth : MonoBehaviour
             yield return null;
         }
 
-        StopPlayMode();
+        ReturnToMainMenu();
     }
 
     bool IsDeathConfirmPressedThisFrame()
@@ -561,13 +564,15 @@ public class PlayerHealth : MonoBehaviour
         return kontrolPemain != null && kontrolPemain.Pemain.DeathConfirm.WasPressedThisFrame();
     }
 
-    void StopPlayMode()
+    void ReturnToMainMenu()
     {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        if (Application.CanStreamedLevelBeLoaded(deathReturnSceneName))
+        {
+            SceneManager.LoadScene(deathReturnSceneName);
+            return;
+        }
+
+        Debug.LogError($"Death return scene {deathReturnSceneName} is not included in Build Settings.", this);
     }
 
     IEnumerator DeathCameraRoutine()
