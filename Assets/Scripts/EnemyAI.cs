@@ -35,6 +35,7 @@ public class EnemyAI : MonoBehaviour
     public float idleDuration = 2f;
     public float patrolSpeed = 2f;
     [Range(0.1f, 1f)] public float walkSpeedMultiplier = 0.6f;
+    [Range(0.5f, 2f)] public float patrolSpeedMultiplier = 1.15f;
     public float chaseSpeed = 4f;
     public float stoppingDistance = 1.5f;
     public float waypointReachDistance = 0.6f;
@@ -48,6 +49,16 @@ public class EnemyAI : MonoBehaviour
     public string armedLocomotionLayerName = "Armed-Locomotion";
     public string unarmedLocomotionLayerName = "Unarmed-Locomotion";
     public string shootingLocomotionLayerName = "2Hand-Shooting-Locomotion";
+    [Header("Weapon Locomotion")]
+    public string crossbowLocomotionLayerName = "2Hand-Crossbow-Locomotion";
+    public string crossbowIdleStateName = "2Hand-Crossbow-Idle-Static";
+    public string crossbowWalkStateName = "2Hand-Crossbow-Walk";
+    public string crossbowRunStateName = "2Hand-Crossbow-Run-Forward";
+    public string spearLocomotionLayerName = "2Hand-Spear-Locomotion";
+    public string spearIdleStateName = "2Hand-Spear-Idle-Static";
+    public string spearWalkStateName = "2Hand-Spear-Walk";
+    public string spearRunStateName = "2Hand-Spear-Run-Forward";
+    [Min(0f)] public float weaponLocomotionCrossFade = 0.12f;
     public EnemyMeleeWeaponController meleeWeaponController;
     public EnemyRangedWeaponController rangedWeaponController;
     public bool useRangedWeaponAttack = true;
@@ -129,6 +140,8 @@ public class EnemyAI : MonoBehaviour
     private float supportBuffFadeTarget = -1f;
     private int locomotionSuppressionCount;
     private System.Collections.Generic.Dictionary<string, int> stateHashes = new System.Collections.Generic.Dictionary<string, int>();
+    private int activeWeaponLocomotionLayer = -1;
+    private int activeWeaponLocomotionStateHash;
 
     void Awake()
     {
@@ -190,6 +203,8 @@ public class EnemyAI : MonoBehaviour
         unarmedAttackLocomotionSuppressed = false;
         supportBuffLocomotionSuppressed = false;
         locomotionSuppressionCount = 0;
+        activeWeaponLocomotionLayer = -1;
+        activeWeaponLocomotionStateHash = 0;
         lastBehaviourUpdateTime = Time.time;
         nextBehaviourUpdateTime = Time.time + Random.Range(0f, Mathf.Max(0.02f, passiveBehaviourUpdateInterval));
         ConfigureLocomotionLayer();
@@ -822,7 +837,9 @@ public class EnemyAI : MonoBehaviour
     float GetWalkMoveSpeed()
     {
         float walkSpeed = GetModifiedEnemyStat(StatusEffectStat.EnemyPatrolSpeed, patrolSpeed);
-        return walkSpeed * Mathf.Clamp(walkSpeedMultiplier, 0.1f, 1f);
+        return walkSpeed
+            * Mathf.Clamp(walkSpeedMultiplier, 0.1f, 1f)
+            * Mathf.Clamp(patrolSpeedMultiplier, 0.5f, 2f);
     }
 
     float GetAttackRange()
@@ -1862,6 +1879,72 @@ public class EnemyAI : MonoBehaviour
         {
             animator.SetBool(chaseParameter, currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack);
         }
+
+        // Reclaim locomotion after any finished reaction or weapon action.
+        // The guard refuses this low-priority request while an action still owns a layer.
+        if (locomotionSuppressionCount == 0)
+        {
+            ConfigureLocomotionLayer();
+            UpdateWeaponLocomotionState(isMoving);
+        }
+    }
+
+    void UpdateWeaponLocomotionState(bool isMoving)
+    {
+        if (animator == null)
+        {
+            return;
+        }
+
+        string layerName = null;
+        string stateName = null;
+
+        EnemyRangedWeapon rangedWeapon = rangedWeaponController != null
+            ? rangedWeaponController.CurrentWeapon ?? rangedWeaponController.startingWeapon
+            : null;
+        if (rangedWeapon != null && rangedWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow)
+        {
+            layerName = crossbowLocomotionLayerName;
+            stateName = isMoving
+                ? (currentState == EnemyAIState.Chase ? crossbowRunStateName : crossbowWalkStateName)
+                : crossbowIdleStateName;
+        }
+        else
+        {
+            EnemyMeleeWeapon meleeWeapon = meleeWeaponController != null
+                ? meleeWeaponController.CurrentWeapon ?? meleeWeaponController.startingWeapon
+                : null;
+            if (meleeWeapon != null && meleeWeapon.category == EnemyMeleeWeaponCategory.Spear && meleeWeapon.holdType == WeaponHoldType.TwoHand)
+            {
+                layerName = spearLocomotionLayerName;
+                stateName = isMoving
+                    ? (currentState == EnemyAIState.Chase ? spearRunStateName : spearWalkStateName)
+                    : spearIdleStateName;
+            }
+        }
+
+        if (string.IsNullOrEmpty(layerName) || string.IsNullOrEmpty(stateName))
+        {
+            activeWeaponLocomotionLayer = -1;
+            activeWeaponLocomotionStateHash = 0;
+            return;
+        }
+
+        int layerIndex = animator.GetLayerIndex(layerName);
+        if (layerIndex <= 0)
+        {
+            return;
+        }
+
+        int stateHash = GetAnimatorStateHash(layerIndex, layerName, stateName);
+        if (stateHash == 0 || (activeWeaponLocomotionLayer == layerIndex && activeWeaponLocomotionStateHash == stateHash))
+        {
+            return;
+        }
+
+        animator.CrossFadeInFixedTime(stateHash, weaponLocomotionCrossFade, layerIndex);
+        activeWeaponLocomotionLayer = layerIndex;
+        activeWeaponLocomotionStateHash = stateHash;
     }
 
     void CacheAnimatorParameters()
@@ -1942,7 +2025,7 @@ public class EnemyAI : MonoBehaviour
             preferredLayerName = rangedWeapon != null
                 ? rangedWeapon.weaponKind switch
                 {
-                    EnemyRangedWeaponKind.Crossbow => "2Hand-Crossbow-Locomotion",
+                    EnemyRangedWeaponKind.Crossbow => crossbowLocomotionLayerName,
                     EnemyRangedWeaponKind.Shotgun => shootingLocomotionLayerName,
                     _ => armedLocomotionLayerName
                 }
@@ -1958,7 +2041,7 @@ public class EnemyAI : MonoBehaviour
                 {
                     EnemyMeleeWeaponCategory.SmallAxe => "2Hand-Axe-Locomotion",
                     EnemyMeleeWeaponCategory.GreatSword => "2Hand-Sword-Locomotion",
-                    EnemyMeleeWeaponCategory.Spear when meleeWeapon.holdType == WeaponHoldType.TwoHand => "2Hand-Spear-Locomotion",
+                    EnemyMeleeWeaponCategory.Spear when meleeWeapon.holdType == WeaponHoldType.TwoHand => spearLocomotionLayerName,
                     _ => armedLocomotionLayerName
                 }
                 : armedLocomotionLayerName;
