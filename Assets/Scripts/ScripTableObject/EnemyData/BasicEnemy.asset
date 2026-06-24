@@ -21,7 +21,7 @@ MonoBehaviour:
   knockbackResistance: 0
   canBeStunned: 1
   canBeKnockedBack: 1
-  moveSpeed: 2
+  moveSpeed: 5
   autoAddNavMeshAgent: 1
   useRandomPatrolWhenNoPoints: 1
   randomPatrolRadius: 6
@@ -32,23 +32,42 @@ MonoBehaviour:
   shotAlertMinDuration: 5
   shotAlertMaxDuration: 60
   idleDuration: 2
-  patrolSpeed: 2
+  patrolSpeed: 5
+  walkSpeedMultiplier: 0.6
   chaseSpeed: 4
   stoppingDistance: 0.85
   waypointReachDistance: 0.6
   faceMoveDirection: 1
   rotationSpeed: 8
+  useSupportBehavior: 0
+  supportAllySearchRadius: 14
+  supportBehindAllyDistance: 3
+  supportFrontlineBuffer: 1.25
+  supportFleeDistanceFromPlayer: 20
+  supportRepositionOnDamageDuration: 3
+  supportDestinationRefreshInterval: 0.35
   attackDamage: 10
   attackRange: 0.9
   attackCooldown: 1
   attackWindup: 0.35
   attackHitRadius: 0.25
+  attackHeavyChance: 0
   attackCriticalChance: 5
   attackCriticalDamagePercent: 50
   attackKnockbackChance: 8
   attackKnockbackPower: 30
   attackMaxKnockbackDistance: 0.7
   attackKnockbackDuration: 0.15
+  hitStatusEffects: []
+  attackStatusEffectChance: 0
+  attackStatusEffects: []
   deathEffect: {fileID: 0}
   hitSound: {fileID: 8300000, guid: 0ae69ea2a9ba3af44866512d3f502222, type: 3}
   deathSound: {fileID: 8300000, guid: d5ab0e5b27b98be4f9accf8c2125fdfb, type: 3}
+  growlSound: {fileID: 0}
+  angryGrowlSound: {fileID: 0}
+  growlMinInterval: 5
+  growlMaxInterval: 12
+  angryGrowlMinInterval: 3
+  angryGrowlMaxInterval: 8
+  voiceVolume: 1

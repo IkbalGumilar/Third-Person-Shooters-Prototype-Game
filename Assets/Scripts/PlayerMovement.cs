@@ -271,8 +271,11 @@ public class PlayerMovement : MonoBehaviour
             if (attachedRigidbody != null)
             {
                 attachedRigidbody.useGravity = false;
-                attachedRigidbody.linearVelocity = Vector3.zero;
-                attachedRigidbody.angularVelocity = Vector3.zero;
+                if (!attachedRigidbody.isKinematic)
+                {
+                    attachedRigidbody.linearVelocity = Vector3.zero;
+                    attachedRigidbody.angularVelocity = Vector3.zero;
+                }
                 if (makeAttachedRigidbodyKinematic)
                 {
                     attachedRigidbody.isKinematic = true;

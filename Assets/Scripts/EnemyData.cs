@@ -20,6 +20,31 @@ public class EnemyStatusEffectChance
     [Range(0f, 100f)] public float chance = 100f;
 }
 
+[System.Serializable]
+public class EnemyAnimationLayerData
+{
+    public string layerName;
+    public string idleStateName;
+    public string patrolStateName;
+    public string chaseStateName;
+    [Min(0f)] public float locomotionCrossFade = 0.12f;
+    public string alertStateName;
+    [Min(0f)] public float alertDuration = 0.35f;
+    public EnemyAnimationActionType actionType;
+    public string[] attackStateNames;
+    public string[] reloadStateNames;
+    public string[] specialAttackStateNames;
+    [Min(0f)] public float attackCrossFade = 0.08f;
+}
+
+public enum EnemyAnimationActionType
+{
+    None,
+    Unarmed,
+    Ranged,
+    Melee
+}
+
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Scriptable Objects/Enemy Data")]
 public class EnemyData : ScriptableObject
 {
@@ -53,10 +78,22 @@ public class EnemyData : ScriptableObject
     public float patrolSpeed = 2f;
     [Range(0.1f, 1f)] public float walkSpeedMultiplier = 0.6f;
     public float chaseSpeed = 4f;
+    [Range(0.5f, 2f)] public float patrolSpeedMultiplier = 1.35f;
+    [Range(0.1f, 2f)] public float crossbowPatrolSpeedMultiplier = 1.85f;
+    [Range(0.1f, 2f)] public float spearPatrolSpeedMultiplier = 1.85f;
+    [Range(0.1f, 1f)] public float maxPatrolSpeedRelativeToChase = 0.75f;
     public float stoppingDistance = 0.85f;
     public float waypointReachDistance = 0.6f;
+    [Min(0.1f)] public float patrolNavMeshSampleRadius = 2f;
+    [Range(1, 12)] public int randomPatrolSampleAttempts = 6;
     public bool faceMoveDirection = true;
     public float rotationSpeed = 8f;
+    [Min(0.01f)] public float agentDestinationUpdateInterval = 0.12f;
+    [Min(0f)] public float agentDestinationChangeThreshold = 0.15f;
+
+    [Header("Animation")]
+    public EnemyAnimationLayerData[] animationLayers;
+
 
     [Header("Support AI")]
     public bool useSupportBehavior;
@@ -66,6 +103,13 @@ public class EnemyData : ScriptableObject
     public float supportFleeDistanceFromPlayer = 20f;
     public float supportRepositionOnDamageDuration = 3f;
     public float supportDestinationRefreshInterval = 0.35f;
+
+    [Header("AI Performance")]
+    [Min(0.02f)] public float stateUpdateInterval = 0.15f;
+    [Min(0f)] public float stateUpdateRandomOffset = 0.05f;
+    [Min(0.01f)] public float activeBehaviourUpdateInterval = 0.03f;
+    [Min(0.02f)] public float passiveBehaviourUpdateInterval = 0.1f;
+    [Min(0.02f)] public float missingPlayerLookupInterval = 0.25f;
 
     [Header("Attack")]
     public float attackDamage = 10f;

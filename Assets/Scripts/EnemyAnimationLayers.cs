@@ -58,4 +58,18 @@ public static class EnemyAnimationLayers
         // owner. Reactions, defense, and death can now preempt them safely.
         guard.TryClaimExclusive(activeLayerIndex, LegacyOwner, AnimationLayerPriority.Locomotion);
     }
+
+    public static void RestoreLocomotionLayer(Animator animator, int locomotionLayerIndex)
+    {
+        AnimationLayerGuard guard = AnimationLayerGuard.GetOrAdd(animator);
+        if (guard == null || locomotionLayerIndex <= 0)
+        {
+            return;
+        }
+
+        if (guard.TryClaimExclusive(locomotionLayerIndex, LegacyOwner, AnimationLayerPriority.Locomotion))
+        {
+            guard.ClearStaleLayersForLocomotion(locomotionLayerIndex);
+        }
+    }
 }

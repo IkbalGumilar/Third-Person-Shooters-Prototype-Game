@@ -117,6 +117,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void Update()
     {
+        if (playerHealth != null && playerHealth.IsDead)
+        {
+            CloseForPlayerDeath();
+            return;
+        }
+
         if (optionPanel == null
             || isLoadingMainMenu
             || Keyboard.current == null
@@ -290,6 +296,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void OpenOptions()
     {
+        if (playerHealth != null && playerHealth.IsDead)
+        {
+            return;
+        }
+
         SetControlsFrozen(true);
 
         suppressChangeDetection = true;
@@ -301,6 +312,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     public void ResumeGame()
     {
+        if (playerHealth != null && playerHealth.IsDead)
+        {
+            CloseForPlayerDeath();
+            return;
+        }
+
         if (optionPanel == null)
         {
             return;
@@ -521,6 +538,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (playerHealth != null)
         {
             playerHealth.Damaged += HandlePlayerDamaged;
+            playerHealth.Died += HandlePlayerDied;
         }
     }
 
@@ -529,6 +547,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (playerHealth != null)
         {
             playerHealth.Damaged -= HandlePlayerDamaged;
+            playerHealth.Died -= HandlePlayerDied;
         }
     }
 
@@ -538,6 +557,28 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             ResumeGame();
         }
+    }
+
+    private void HandlePlayerDied()
+    {
+        CloseForPlayerDeath();
+    }
+
+    private void CloseForPlayerDeath()
+    {
+        if (optionPanel != null)
+        {
+            optionPanel.SetActive(false);
+        }
+
+        if (confirmationPanel != null)
+        {
+            confirmationPanel.SetActive(false);
+        }
+
+        // PlayerHealth has disabled gameplay input. Do not restore the
+        // previous options-menu state while the death sequence is active.
+        controlsFrozen = false;
     }
 
     private void SetControlsFrozen(bool frozen)

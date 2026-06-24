@@ -157,7 +157,6 @@ public class PlayerAimIK : MonoBehaviour
         if (active)
         {
             currentWeight = 0f;
-            ResetIKWeights();
         }
     }
 
@@ -165,7 +164,6 @@ public class PlayerAimIK : MonoBehaviour
     {
         suppressPoseUntil = Mathf.Max(suppressPoseUntil, Time.time + Mathf.Max(0f, duration));
         currentWeight = 0f;
-        ResetIKWeights();
     }
 
     void LateUpdate()

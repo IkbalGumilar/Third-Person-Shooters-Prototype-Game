@@ -111,7 +111,7 @@ public class EnemyShieldController : MonoBehaviour
             knockbackStateName = "Shield-Attack1";
         }
         agent = GetComponent<NavMeshAgent>();
-        if (agent == null)
+        if (agent == null && NavMesh.SamplePosition(transform.position, out _, 0.1f, NavMesh.AllAreas))
         {
             agent = gameObject.AddComponent<NavMeshAgent>();
         }
@@ -1090,6 +1090,12 @@ public class EnemyShieldController : MonoBehaviour
     void FadeDefenseLayerWeight(float targetWeight)
     {
         StopDefenseFade();
+        if (!isActiveAndEnabled)
+        {
+            SetDefenseLayerWeightImmediate(targetWeight);
+            return;
+        }
+
         defenseFadeRoutine = StartCoroutine(FadeDefenseRoutine(targetWeight));
     }
 

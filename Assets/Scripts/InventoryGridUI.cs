@@ -165,6 +165,12 @@ public class InventoryGridUI : MonoBehaviour
 
     void Update()
     {
+        if (playerHealth != null && playerHealth.IsDead)
+        {
+            CloseForPlayerDeath();
+            return;
+        }
+
         if (playerMovement != null && playerMovement.IsGuardBroken)
         {
             if (IsOpen())
@@ -2539,6 +2545,8 @@ public class InventoryGridUI : MonoBehaviour
         {
             playerHealth.Damaged -= HandlePlayerDamaged;
             playerHealth.Damaged += HandlePlayerDamaged;
+            playerHealth.Died -= HandlePlayerDied;
+            playerHealth.Died += HandlePlayerDied;
         }
     }
 
@@ -2547,6 +2555,7 @@ public class InventoryGridUI : MonoBehaviour
         if (playerHealth != null)
         {
             playerHealth.Damaged -= HandlePlayerDamaged;
+            playerHealth.Died -= HandlePlayerDied;
         }
     }
 
@@ -2556,6 +2565,39 @@ public class InventoryGridUI : MonoBehaviour
         {
             SetOpen(false);
         }
+    }
+
+    void HandlePlayerDied()
+    {
+        CloseForPlayerDeath();
+    }
+
+    void CloseForPlayerDeath()
+    {
+        if (inventoryRoot == gameObject)
+        {
+            inventoryCanvasGroup = inventoryCanvasGroup != null
+                ? inventoryCanvasGroup
+                : inventoryRoot != null ? inventoryRoot.GetComponent<CanvasGroup>() : null;
+            if (inventoryCanvasGroup != null)
+            {
+                inventoryCanvasGroup.alpha = 0f;
+                inventoryCanvasGroup.interactable = false;
+                inventoryCanvasGroup.blocksRaycasts = false;
+            }
+        }
+        else if (inventoryRoot != null)
+        {
+            inventoryRoot.SetActive(false);
+        }
+
+        CloseContextMenu();
+        ResetThrowAwayDragFeedback();
+        IsAnyInventoryOpen = false;
+
+        // Do not restore the input state captured while inventory was open.
+        // PlayerHealth owns those components once death has started.
+        controlsFrozen = false;
     }
 
     void SetControlsFrozen(bool frozen)

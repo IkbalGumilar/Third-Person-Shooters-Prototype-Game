@@ -40,8 +40,9 @@ public class EnemyMeleeWeapon : ScriptableObject
     [Range(0f, 100f)] public float statusEffectChance = 0f;
     public StatusEffectData[] statusEffects;
 
-    [Header("Animation")]
+    [HideInInspector]
     public string[] attackStateNames;
+    [HideInInspector]
     public float attackCrossFade = 0.08f;
 
     [Header("Hold Offset")]

@@ -9,6 +9,7 @@ using Unity.Cinemachine;
 public class PlayerHealth : MonoBehaviour
 {
     public event System.Action Damaged;
+    public event System.Action Died;
 
     public float maxHealth = 100f;
     public float currentHealth = 100f;
@@ -436,6 +437,7 @@ public class PlayerHealth : MonoBehaviour
         deathPosition = transform.position;
         currentHealth = 0f;
         regenHealth = Mathf.Max(0f, regenHealth);
+        Died?.Invoke();
 
         NotifyEnemiesPlayerDied();
         PlayDeathSound();

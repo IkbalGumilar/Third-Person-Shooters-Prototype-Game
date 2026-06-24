@@ -48,17 +48,27 @@ public class EnemyRangedWeapon : ScriptableObject
     [Range(0f, 100f)] public float crossbowMeleeStatusEffectChance = 0f;
     public StatusEffectData[] crossbowMeleeStatusEffects;
 
-    [Header("Animation")]
+    [HideInInspector]
     public string rangeLayerName = "2Hand-Shooting";
+    [HideInInspector]
     public string[] handgunShootStateNames = { "Pistol-Attack-L1", "Pistol-Attack-R1", "Pistol-Attack-L2" };
+    [HideInInspector]
     public string handgunReloadStateName = "Pistol-Reload-L1";
+    [HideInInspector]
     public string[] dualPistolShootStateNames = { "Pistol-Attack-Dual1", "Pistol-Attack-Dual2", "Pistol-Attack-Dual3" };
+    [HideInInspector]
     public string[] dualPistolReloadStateNames = { "Pistol-Reload-L1", "Pistol-Reload-R1" };
+    [HideInInspector]
     public string[] crossbowShootStateNames = { "2Hand-Crossbow-Attack1", "2Hand-Crossbow-Attack2", "2Hand-Crossbow-Attack3", "2Hand-Crossbow-Attack4", "2Hand-Crossbow-Attack5", "2Hand-Crossbow-Attack6" };
+    [HideInInspector]
     public string crossbowReloadStateName = "2Hand-Crossbow-Reload";
+    [HideInInspector]
     public string[] crossbowMeleeStateNames = { "2Hand-Crossbow-Attack-Kick-L1", "2Hand-Crossbow-Attack-Kick-R1", "2Hand-Crossbow-Attack-Kick-L2", "2Hand-Crossbow-Attack-Kick-R2" };
+    [HideInInspector]
     public string[] shotgunShootStateNames = { "Shooting-Fire-Rifle1", "Shooting-Fire-Rifle2", "Shooting-Attack1" };
+    [HideInInspector]
     public string shotgunReloadStateName = "Shooting-Reload-Start";
+    [HideInInspector]
     public float animationCrossFade = 0.08f;
 
     [Header("Hold Offset")]

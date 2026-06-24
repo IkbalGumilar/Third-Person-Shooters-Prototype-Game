@@ -176,6 +176,51 @@ public sealed class AnimationLayerGuard : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Locomotion is the resting animation state. Clear any stale full-body
+    /// overlay that is not protected by a higher-priority owner before it is
+    /// allowed to become visible again.
+    /// </summary>
+    public void ClearStaleLayersForLocomotion(int locomotionLayerIndex)
+    {
+        Animator animator = GetComponent<Animator>();
+        if (animator == null)
+        {
+            return;
+        }
+
+        List<int> removableClaims = null;
+        for (int layerIndex = 1; layerIndex < animator.layerCount; layerIndex++)
+        {
+            if (layerIndex == locomotionLayerIndex)
+            {
+                continue;
+            }
+
+            if (claims.TryGetValue(layerIndex, out Claim claim) && claim.priority > AnimationLayerPriority.Locomotion)
+            {
+                continue;
+            }
+
+            SetLayerWeight(layerIndex, 0f);
+            if (claims.ContainsKey(layerIndex))
+            {
+                removableClaims ??= new List<int>();
+                removableClaims.Add(layerIndex);
+            }
+        }
+
+        if (removableClaims == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < removableClaims.Count; i++)
+        {
+            claims.Remove(removableClaims[i]);
+        }
+    }
+
     private void OnDisable()
     {
         ClearClaims();

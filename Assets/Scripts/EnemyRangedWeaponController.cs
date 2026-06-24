@@ -157,9 +157,6 @@ public class EnemyRangedWeaponController : MonoBehaviour
     IEnumerator ShootRoutine(Transform target)
     {
         StopRangeFade();
-        enemyAI?.SetLocomotionSuppressed(true);
-        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
-        SetRangeLayerWeight(1f);
         Vector3 lockedTargetPoint = GetTargetPoint(target);
         Vector3 lockedTargetPosition = target.position;
         float aimLockDelay = GetAimLockDelay();
@@ -168,6 +165,12 @@ public class EnemyRangedWeaponController : MonoBehaviour
             yield return new WaitForSeconds(aimLockDelay);
         }
 
+        // 1Hand-Pistol currently defaults to an attack state. Do not expose
+        // that layer while the enemy is merely locking its aim; activate it
+        // only in the same frame as the selected firing animation.
+        enemyAI?.SetLocomotionSuppressed(true);
+        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
+        SetRangeLayerWeight(1f);
         PlayRandomShootAnimation();
         PlaySound(currentWeapon.shootSound);
         yield return null;
@@ -572,6 +575,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
             return;
         }
 
+        if (TryPlayEnemyDataShootAnimation())
+        {
+            return;
+        }
+
         if (currentWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow)
         {
             PlayRandomState(currentWeapon.crossbowShootStateNames);
@@ -593,9 +601,19 @@ public class EnemyRangedWeaponController : MonoBehaviour
         PlayRandomState(currentWeapon.handgunShootStateNames);
     }
 
+    bool TryPlayEnemyDataShootAnimation()
+    {
+        return TryPlayEnemyDataRangedStates(RangedAnimationSlot.Attack);
+    }
+
     void PlayReloadAnimation()
     {
         if (currentWeapon == null)
+        {
+            return;
+        }
+
+        if (TryPlayEnemyDataRangedStates(RangedAnimationSlot.Reload))
         {
             return;
         }
@@ -623,10 +641,59 @@ public class EnemyRangedWeaponController : MonoBehaviour
 
     void PlayRandomCrossbowMeleeAnimation()
     {
+        if (TryPlayEnemyDataRangedStates(RangedAnimationSlot.SpecialAttack))
+        {
+            return;
+        }
+
         if (currentWeapon != null)
         {
             PlayRandomState(currentWeapon.crossbowMeleeStateNames);
         }
+    }
+
+    enum RangedAnimationSlot
+    {
+        Attack,
+        Reload,
+        SpecialAttack
+    }
+
+    bool TryPlayEnemyDataRangedStates(RangedAnimationSlot slot)
+    {
+        EnemyAnimationLayerData[] layers = enemy != null && enemy.enemyData != null
+            ? enemy.enemyData.animationLayers
+            : null;
+        if (layers == null)
+        {
+            return false;
+        }
+
+        string weaponLayerName = GetRangeLayerName();
+        for (int i = 0; i < layers.Length; i++)
+        {
+            EnemyAnimationLayerData layer = layers[i];
+            if (layer == null || layer.actionType != EnemyAnimationActionType.Ranged || layer.layerName != weaponLayerName)
+            {
+                continue;
+            }
+
+            string[] stateNames = slot switch
+            {
+                RangedAnimationSlot.Reload => layer.reloadStateNames,
+                RangedAnimationSlot.SpecialAttack => layer.specialAttackStateNames,
+                _ => layer.attackStateNames
+            };
+            if (stateNames == null || stateNames.Length == 0)
+            {
+                continue;
+            }
+
+            PlayRandomState(stateNames);
+            return true;
+        }
+
+        return false;
     }
 
     bool UseDualPistol()
@@ -792,6 +859,13 @@ public class EnemyRangedWeaponController : MonoBehaviour
         }
 
         StopRangeFade();
+        if (!isActiveAndEnabled)
+        {
+            animator.SetLayerWeight(layerIndex, targetWeight);
+            rangeFadeTarget = -1f;
+            return;
+        }
+
         rangeFadeTarget = targetWeight;
         rangeFadeRoutine = StartCoroutine(FadeAnimatorLayerWeight(layerIndex, targetWeight, rangeLayerFadeOut));
     }

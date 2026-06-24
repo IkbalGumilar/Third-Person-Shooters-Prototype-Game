@@ -13,6 +13,16 @@ public enum EnemyAIState
 
 public class EnemyAI : MonoBehaviour
 {
+    const float DefaultPatrolSpeed = 2f;
+    const float DefaultWalkSpeedMultiplier = 0.6f;
+    const float DefaultChaseSpeed = 4f;
+    const float DefaultPatrolSpeedMultiplier = 1.35f;
+    const float DefaultCrossbowPatrolSpeedMultiplier = 1.85f;
+    const float DefaultSpearPatrolSpeedMultiplier = 1.85f;
+    const float DefaultMaxPatrolSpeedRelativeToChase = 0.75f;
+    const float AttackEnterRangeMultiplier = 0.9f;
+    const float AttackExitRangeMultiplier = 1.1f;
+
     private static readonly List<EnemyAI> activeEnemies = new List<EnemyAI>();
     private static Transform cachedPlayerTarget;
     private static float nextMissingPlayerLookupTime;
@@ -22,81 +32,75 @@ public class EnemyAI : MonoBehaviour
     public Transform playerTarget;
     public EnemyAIState currentState = EnemyAIState.Idle;
     public Transform[] patrolPoints;
-    public bool useEnemyDataSettings = true;
-    public bool autoAddNavMeshAgent = true;
-    public bool useRandomPatrolWhenNoPoints = true;
-    public float randomPatrolRadius = 6f;
-    public float detectionRange = 10f;
-    public float loseTargetRange = 14f;
-    public float shotAlertRangeMultiplier = 3f;
-    public float shotAlertShareRadius = 5f;
-    public float shotAlertMinDuration = 5f;
-    public float shotAlertMaxDuration = 60f;
-    public float idleDuration = 2f;
-    public float patrolSpeed = 2f;
-    [Range(0.1f, 1f)] public float walkSpeedMultiplier = 0.6f;
-    [Range(0.5f, 2f)] public float patrolSpeedMultiplier = 1.15f;
-    public float chaseSpeed = 4f;
-    public float stoppingDistance = 1.5f;
-    public float waypointReachDistance = 0.6f;
-    public float agentDestinationUpdateInterval = 0.12f;
-    public float agentDestinationChangeThreshold = 0.15f;
-    public bool faceMoveDirection = true;
-    public float rotationSpeed = 8f;
     public Animator animator;
-    public string speedParameter = "Speed";
-    public string chaseParameter = "IsChasing";
-    public string armedLocomotionLayerName = "Armed-Locomotion";
-    public string unarmedLocomotionLayerName = "Unarmed-Locomotion";
-    public string shootingLocomotionLayerName = "2Hand-Shooting-Locomotion";
-    [Header("Weapon Locomotion")]
-    public string crossbowLocomotionLayerName = "2Hand-Crossbow-Locomotion";
-    public string crossbowIdleStateName = "2Hand-Crossbow-Idle-Static";
-    public string crossbowWalkStateName = "2Hand-Crossbow-Walk";
-    public string crossbowRunStateName = "2Hand-Crossbow-Run-Forward";
-    public string spearLocomotionLayerName = "2Hand-Spear-Locomotion";
-    public string spearIdleStateName = "2Hand-Spear-Idle-Static";
-    public string spearWalkStateName = "2Hand-Spear-Walk";
-    public string spearRunStateName = "2Hand-Spear-Run-Forward";
-    [Min(0f)] public float weaponLocomotionCrossFade = 0.12f;
     public EnemyMeleeWeaponController meleeWeaponController;
     public EnemyRangedWeaponController rangedWeaponController;
-    public bool useRangedWeaponAttack = true;
-    public bool useMeleeWeaponAttack = true;
-    public bool useUnarmedAttackWhenNoWeapon = true;
-    public string unarmedAttackLayerName = "Unarmed";
-    public string[] unarmedAttackStateMachineNames = System.Array.Empty<string>();
-    public string[] unarmedAttackStateNames = { "Unarmed-Attack-L1", "Unarmed-Attack-R1", "Unarmed-Attack-L2", "Unarmed-Attack-R2", "Unarmed-Attack-L3", "Unarmed-Attack-R3" };
-    public float unarmedAttackCrossFade = 0.08f;
-    public string celebrationTriggerName = "Celebration";
-    public string celebrationStateName = "Celebration";
-    public string celebrationLayerName = "Base Layer";
-    public float celebrationFadeDuration = 0.1f;
-    public float celebrationDuration = 2f;
-    public string patrolStateName = "Patroli";
-    public string patrolLayerName = "Base Layer";
-    public float patrolFadeDuration = 0.15f;
-    public float animatorSpeedDampTime = 0.12f;
-    public float attackLayerFadeOut = 0.12f;
-    public bool useSupportBehavior;
-    public string supportBuffLayerName = "Armed";
-    public string supportBuffStateName = "Armed-Boost1";
-    public float supportBuffFadeDuration = 0.08f;
-    public float supportBuffDuration = 1.2f;
-    public float supportBuffLayerFadeOut = 0.12f;
-    public float supportAllySearchRadius = 14f;
-    public float supportBehindAllyDistance = 3f;
-    public float supportFrontlineBuffer = 1.25f;
-    public float supportFleeDistanceFromPlayer = 20f;
-    public float supportRepositionOnDamageDuration = 3f;
-    public float supportDestinationRefreshInterval = 0.35f;
-    public float stateUpdateInterval = 0.15f;
-    public float stateUpdateRandomOffset = 0.05f;
 
-    [Header("Performance")]
-    [Min(0.01f)] public float activeBehaviourUpdateInterval = 0.03f;
-    [Min(0.02f)] public float passiveBehaviourUpdateInterval = 0.1f;
-    [Min(0.02f)] public float missingPlayerLookupInterval = 0.25f;
+    // Runtime cache populated from EnemyData. Animator mapping stays here
+    // because every enemy shares the same controller and it is not per-type data.
+    private bool autoAddNavMeshAgent = true;
+    private bool useRandomPatrolWhenNoPoints = true;
+    private float randomPatrolRadius = 6f;
+    private float detectionRange = 10f;
+    private float loseTargetRange = 14f;
+    private float shotAlertRangeMultiplier = 3f;
+    private float shotAlertShareRadius = 5f;
+    private float shotAlertMinDuration = 5f;
+    private float shotAlertMaxDuration = 60f;
+    private float idleDuration = 2f;
+    private float stoppingDistance = 1.5f;
+    private float waypointReachDistance = 0.6f;
+    private float patrolNavMeshSampleRadius = 2f;
+    private int randomPatrolSampleAttempts = 6;
+    private float agentDestinationUpdateInterval = 0.12f;
+    private float agentDestinationChangeThreshold = 0.15f;
+    private bool faceMoveDirection = true;
+    private float rotationSpeed = 8f;
+    private string speedParameter = "Speed";
+    private string chaseParameter = "IsChasing";
+    private string armedLocomotionLayerName = "Armed-Locomotion";
+    private string unarmedLocomotionLayerName = "Unarmed-Locomotion";
+    private string shootingLocomotionLayerName = "2Hand-Shooting-Locomotion";
+    private string crossbowLocomotionLayerName = "2Hand-Crossbow-Locomotion";
+    private string crossbowIdleStateName = "2Hand-Crossbow-Idle-Static";
+    private string crossbowWalkStateName = "2Hand-Crossbow-Walk";
+    private string crossbowRunStateName = "2Hand-Crossbow-Run-Forward";
+    private string spearLocomotionLayerName = "2Hand-Spear-Locomotion";
+    private string spearIdleStateName = "2Hand-Spear-Idle-Static";
+    private string spearWalkStateName = "2Hand-Spear-Walk";
+    private string spearRunStateName = "2Hand-Spear-Run-Forward";
+    private float weaponLocomotionCrossFade = 0.16f;  // Increased from 0.12f for smoother patrol blending
+    private string unarmedAttackLayerName = "Unarmed";
+    private string[] unarmedAttackStateMachineNames = System.Array.Empty<string>();
+    private string[] unarmedAttackStateNames = { "Unarmed-Attack-L1", "Unarmed-Attack-R1", "Unarmed-Attack-L2", "Unarmed-Attack-R2", "Unarmed-Attack-L3", "Unarmed-Attack-R3" };
+    private float unarmedAttackCrossFade = 0.08f;
+    private string celebrationTriggerName = "Celebration";
+    private string celebrationStateName = "Celebration";
+    private string celebrationLayerName = "Base Layer";
+    private float celebrationFadeDuration = 0.1f;
+    private float celebrationDuration = 2f;
+    private string patrolStateName = "Patroli";
+    private string patrolLayerName = "Base Layer";
+    private float patrolFadeDuration = 0.15f;
+    private float animatorSpeedDampTime = 0.12f;
+    private float attackLayerFadeOut = 0.12f;
+    private bool useSupportBehavior;
+    private string supportBuffLayerName = "Armed";
+    private string supportBuffStateName = "Armed-Boost1";
+    private float supportBuffFadeDuration = 0.08f;
+    private float supportBuffDuration = 1.2f;
+    private float supportBuffLayerFadeOut = 0.12f;
+    private float supportAllySearchRadius = 14f;
+    private float supportBehindAllyDistance = 3f;
+    private float supportFrontlineBuffer = 1.25f;
+    private float supportFleeDistanceFromPlayer = 20f;
+    private float supportRepositionOnDamageDuration = 3f;
+    private float supportDestinationRefreshInterval = 0.35f;
+    private float stateUpdateInterval = 0.15f;
+    private float stateUpdateRandomOffset = 0.05f;
+    private float activeBehaviourUpdateInterval = 0.03f;
+    private float passiveBehaviourUpdateInterval = 0.1f;
+    private float missingPlayerLookupInterval = 0.25f;
 
     private Enemy enemy;
     private EnemyStatusEffectController statusController;
@@ -111,11 +115,14 @@ public class EnemyAI : MonoBehaviour
     private float shotAlertUntilTime;
     private Coroutine knockbackCoroutine;
     private bool hasDestination;
+    private float fallbackStoppingDistance;
     private AudioSource audioSource;
     private float nextVoiceTime;
     private bool ignorePlayerTarget;
     private bool isCelebrating;
     private Coroutine celebrationRoutine;
+    private Coroutine alertRoutine;
+    private bool isAlerting;
     private Coroutine unarmedAttackRoutine;
     private Coroutine unarmedAttackFadeRoutine;
     // This attack owns one locomotion suppression while it is active. Other
@@ -142,6 +149,8 @@ public class EnemyAI : MonoBehaviour
     private System.Collections.Generic.Dictionary<string, int> stateHashes = new System.Collections.Generic.Dictionary<string, int>();
     private int activeWeaponLocomotionLayer = -1;
     private int activeWeaponLocomotionStateHash;
+    private float smoothedAnimatorSpeed;
+    private float animatorSpeedVelocity;
 
     void Awake()
     {
@@ -149,7 +158,7 @@ public class EnemyAI : MonoBehaviour
         statusController = GetComponent<EnemyStatusEffectController>();
         ApplyEnemyDataSettings();
         agent = GetComponent<NavMeshAgent>();
-        if (agent == null && autoAddNavMeshAgent)
+        if (agent == null && autoAddNavMeshAgent && IsOnNavMeshAtSpawnPosition())
         {
             agent = gameObject.AddComponent<NavMeshAgent>();
         }
@@ -167,6 +176,11 @@ public class EnemyAI : MonoBehaviour
         FindPlayer();
         SetupAgent();
         ScheduleNextVoice(false);
+    }
+
+    private bool IsOnNavMeshAtSpawnPosition()
+    {
+        return NavMesh.SamplePosition(transform.position, out _, 0.1f, NavMesh.AllAreas);
     }
 
     void OnValidate()
@@ -190,6 +204,8 @@ public class EnemyAI : MonoBehaviour
         ignorePlayerTarget = false;
         isCelebrating = false;
         celebrationRoutine = null;
+        alertRoutine = null;
+        isAlerting = false;
         supportAlly = null;
         nextSupportDestinationUpdateTime = 0f;
         supportRepositionUntilTime = 0f;
@@ -205,6 +221,8 @@ public class EnemyAI : MonoBehaviour
         locomotionSuppressionCount = 0;
         activeWeaponLocomotionLayer = -1;
         activeWeaponLocomotionStateHash = 0;
+        smoothedAnimatorSpeed = 0f;
+        animatorSpeedVelocity = 0f;
         lastBehaviourUpdateTime = Time.time;
         nextBehaviourUpdateTime = Time.time + Random.Range(0f, Mathf.Max(0.02f, passiveBehaviourUpdateInterval));
         ConfigureLocomotionLayer();
@@ -249,6 +267,13 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        if (isAlerting)
+        {
+            StopMoving();
+            UpdateAnimator(Time.deltaTime);
+            return;
+        }
+
         if ((playerTarget == null || !playerTarget.gameObject.activeInHierarchy) && !ignorePlayerTarget)
         {
             playerTarget = null;
@@ -265,9 +290,13 @@ public class EnemyAI : MonoBehaviour
         if (TryRunBehaviourUpdate(out float behaviourDeltaTime))
         {
             UpdateBehaviour(behaviourDeltaTime);
-            UpdateAnimator(behaviourDeltaTime);
         }
 
+        UpdateFallbackMovement(Time.deltaTime);
+
+        // Navigation decisions are throttled for performance, but Animator
+        // parameters must be refreshed every frame to keep blending smooth.
+        UpdateAnimator(Time.deltaTime);
         UpdateVoice();
     }
 
@@ -552,13 +581,14 @@ public class EnemyAI : MonoBehaviour
         }
 
         float attackRange = GetAttackRange();
-        if ((transform.position - playerTarget.position).sqrMagnitude <= attackRange * attackRange)
+        float enterAttackRange = attackRange * AttackEnterRangeMultiplier;
+        if ((transform.position - playerTarget.position).sqrMagnitude <= enterAttackRange * enterAttackRange)
         {
             EnterAttack();
             return;
         }
 
-        SetMoveSpeed(GetModifiedEnemyStat(StatusEffectStat.EnemyChaseSpeed, chaseSpeed));
+        SetMoveSpeed(GetChaseMoveSpeed());
         MoveTo(playerTarget.position, GetModifiedEnemyStat(StatusEffectStat.EnemyStoppingDistance, stoppingDistance));
     }
 
@@ -571,7 +601,8 @@ public class EnemyAI : MonoBehaviour
         }
 
         float attackRange = GetAttackRange();
-        if ((transform.position - playerTarget.position).sqrMagnitude > attackRange * attackRange)
+        float exitAttackRange = attackRange * AttackExitRangeMultiplier;
+        if ((transform.position - playerTarget.position).sqrMagnitude > exitAttackRange * exitAttackRange)
         {
             EnterChase();
             return;
@@ -600,7 +631,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        SetMoveSpeed(GetModifiedEnemyStat(StatusEffectStat.EnemyChaseSpeed, chaseSpeed));
+        SetMoveSpeed(GetChaseMoveSpeed());
 
         if (!IsValidSupportAlly(supportAlly))
         {
@@ -670,6 +701,7 @@ public class EnemyAI : MonoBehaviour
         if (!wasAggressive)
         {
             PlayVoice(GetAngryGrowlSound());
+            TryStartAlertAnimation();
         }
 
         ScheduleNextVoice(true);
@@ -694,24 +726,117 @@ public class EnemyAI : MonoBehaviour
         RequestImmediateBehaviourUpdate();
     }
 
+    void TryStartAlertAnimation()
+    {
+        if (!TryGetAlertAnimation(out string layerName, out string stateName, out float duration) || animator == null)
+        {
+            return;
+        }
+
+        int layerIndex = animator.GetLayerIndex(layerName);
+        int stateHash = layerIndex > 0 ? GetAnimatorStateHash(layerIndex, layerName, stateName) : 0;
+        if (stateHash == 0)
+        {
+            return;
+        }
+
+        if (alertRoutine != null)
+        {
+            StopCoroutine(alertRoutine);
+        }
+
+        alertRoutine = StartCoroutine(AlertAnimationRoutine(layerIndex, stateHash, duration));
+    }
+
+    bool TryGetAlertAnimation(out string layerName, out string stateName, out float duration)
+    {
+        layerName = null;
+        stateName = null;
+        duration = 0f;
+        EnemyAnimationLayerData[] layers = enemy != null && enemy.enemyData != null ? enemy.enemyData.animationLayers : null;
+        if (layers == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < layers.Length; i++)
+        {
+            EnemyAnimationLayerData layer = layers[i];
+            if (layer == null || string.IsNullOrEmpty(layer.layerName) || string.IsNullOrEmpty(layer.alertStateName))
+            {
+                continue;
+            }
+
+            layerName = layer.layerName;
+            stateName = layer.alertStateName;
+            duration = Mathf.Max(0f, layer.alertDuration);
+            return true;
+        }
+
+        return false;
+    }
+
+    IEnumerator AlertAnimationRoutine(int layerIndex, int stateHash, float duration)
+    {
+        isAlerting = true;
+        SetLocomotionSuppressed(true);
+        StopMoving();
+        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
+        animator.CrossFadeInFixedTime(stateHash, 0.08f, layerIndex);
+
+        yield return new WaitForSeconds(Mathf.Max(0f, duration));
+
+        isAlerting = false;
+        alertRoutine = null;
+        SetLocomotionSuppressed(false);
+    }
+
     void SetNextPatrolDestination()
     {
         if (patrolPoints != null && patrolPoints.Length > 0)
         {
-            Transform point = patrolPoints[patrolIndex % patrolPoints.Length];
-            patrolIndex++;
-            if (point != null)
+            for (int i = 0; i < patrolPoints.Length; i++)
             {
-                SetDestination(point.position);
-                return;
+                Transform point = patrolPoints[patrolIndex % patrolPoints.Length];
+                patrolIndex++;
+                if (point != null && TrySetPatrolDestination(point.position))
+                {
+                    return;
+                }
             }
         }
 
         if (useRandomPatrolWhenNoPoints)
         {
-            Vector2 random = Random.insideUnitCircle * GetModifiedEnemyStat(StatusEffectStat.EnemyRandomPatrolRadius, randomPatrolRadius);
-            SetDestination(spawnPosition + new Vector3(random.x, 0f, random.y));
+            float radius = GetModifiedEnemyStat(StatusEffectStat.EnemyRandomPatrolRadius, randomPatrolRadius);
+            int attempts = Mathf.Clamp(randomPatrolSampleAttempts, 1, 12);
+            for (int i = 0; i < attempts; i++)
+            {
+                Vector2 random = Random.insideUnitCircle * radius;
+                if (TrySetPatrolDestination(spawnPosition + new Vector3(random.x, 0f, random.y)))
+                {
+                    return;
+                }
+            }
         }
+    }
+
+    bool TrySetPatrolDestination(Vector3 requestedDestination)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+        {
+            SetDestination(requestedDestination);
+            return true;
+        }
+
+        float sampleRadius = Mathf.Max(0.1f, patrolNavMeshSampleRadius);
+        if (!NavMesh.SamplePosition(requestedDestination, out NavMeshHit hit, sampleRadius, agent.areaMask))
+        {
+            return false;
+        }
+
+        SetDestination(hit.position);
+        return true;
     }
 
     void SetDestination(Vector3 destination)
@@ -738,6 +863,28 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        currentDestination = destination;
+        hasDestination = true;
+        fallbackStoppingDistance = Mathf.Max(0f, stopDistance);
+    }
+
+    void UpdateFallbackMovement(float deltaTime)
+    {
+        if ((agent != null && agent.enabled && agent.isOnNavMesh) || !hasDestination)
+        {
+            return;
+        }
+
+        if (currentState != EnemyAIState.Patrol && currentState != EnemyAIState.Chase)
+        {
+            return;
+        }
+
+        MoveFallbackToward(currentDestination, fallbackStoppingDistance, deltaTime);
+    }
+
+    void MoveFallbackToward(Vector3 destination, float stopDistance, float deltaTime)
+    {
         Vector3 direction = destination - transform.position;
         direction.y = 0f;
         float distanceSqr = direction.sqrMagnitude;
@@ -747,7 +894,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         float distance = Mathf.Sqrt(distanceSqr);
-        Vector3 move = direction.normalized * GetMoveSpeed() * Time.deltaTime;
+        Vector3 move = direction.normalized * GetMoveSpeed() * Mathf.Max(0f, deltaTime);
         transform.position += Vector3.ClampMagnitude(move, distance);
 
         if (faceMoveDirection)
@@ -798,6 +945,8 @@ public class EnemyAI : MonoBehaviour
 
     void StopMoving()
     {
+        hasDestination = false;
+
         if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             if (!agent.isStopped)
@@ -829,32 +978,93 @@ public class EnemyAI : MonoBehaviour
     float GetMoveSpeed()
     {
         float speed = currentState == EnemyAIState.Chase
-            ? GetModifiedEnemyStat(StatusEffectStat.EnemyChaseSpeed, chaseSpeed)
+            ? GetChaseMoveSpeed()
             : GetWalkMoveSpeed();
         return GetModifiedEnemyStat(StatusEffectStat.EnemyMoveSpeed, speed);
     }
 
     float GetWalkMoveSpeed()
     {
-        float walkSpeed = GetModifiedEnemyStat(StatusEffectStat.EnemyPatrolSpeed, patrolSpeed);
-        return walkSpeed
-            * Mathf.Clamp(walkSpeedMultiplier, 0.1f, 1f)
-            * Mathf.Clamp(patrolSpeedMultiplier, 0.5f, 2f);
+        float walkSpeed = GetModifiedEnemyStat(StatusEffectStat.EnemyPatrolSpeed, GetBasePatrolSpeed());
+        float desiredSpeed = walkSpeed
+            * Mathf.Clamp(GetWalkSpeedMultiplier(), 0.1f, 1f)
+            * Mathf.Clamp(GetPatrolSpeedMultiplier(), 0.5f, 2f)
+            * GetWeaponPatrolSpeedMultiplier();
+        float chaseSpeedLimit = GetChaseMoveSpeed()
+            * Mathf.Clamp(GetMaxPatrolSpeedRelativeToChase(), 0.1f, 1f);
+        return Mathf.Min(desiredSpeed, chaseSpeedLimit);
+    }
+
+    float GetBasePatrolSpeed()
+    {
+        return enemy != null && enemy.enemyData != null ? enemy.enemyData.patrolSpeed : DefaultPatrolSpeed;
+    }
+
+    float GetWalkSpeedMultiplier()
+    {
+        return enemy != null && enemy.enemyData != null ? enemy.enemyData.walkSpeedMultiplier : DefaultWalkSpeedMultiplier;
+    }
+
+    float GetChaseMoveSpeed()
+    {
+        float baseSpeed = enemy != null && enemy.enemyData != null ? enemy.enemyData.chaseSpeed : DefaultChaseSpeed;
+        return GetModifiedEnemyStat(StatusEffectStat.EnemyChaseSpeed, baseSpeed);
+    }
+
+    float GetPatrolSpeedMultiplier()
+    {
+        return enemy != null && enemy.enemyData != null
+            ? enemy.enemyData.patrolSpeedMultiplier
+            : DefaultPatrolSpeedMultiplier;
+    }
+
+    float GetMaxPatrolSpeedRelativeToChase()
+    {
+        return enemy != null && enemy.enemyData != null
+            ? enemy.enemyData.maxPatrolSpeedRelativeToChase
+            : DefaultMaxPatrolSpeedRelativeToChase;
+    }
+
+    float GetWeaponPatrolSpeedMultiplier()
+    {
+        EnemyRangedWeapon rangedWeapon = rangedWeaponController != null
+            ? rangedWeaponController.CurrentWeapon ?? rangedWeaponController.startingWeapon
+            : null;
+        if (rangedWeapon != null && rangedWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow)
+        {
+            float multiplier = enemy != null && enemy.enemyData != null
+                ? enemy.enemyData.crossbowPatrolSpeedMultiplier
+                : DefaultCrossbowPatrolSpeedMultiplier;
+            return Mathf.Max(0.1f, multiplier);
+        }
+
+        EnemyMeleeWeapon meleeWeapon = meleeWeaponController != null
+            ? meleeWeaponController.CurrentWeapon ?? meleeWeaponController.startingWeapon
+            : null;
+        if (meleeWeapon != null && meleeWeapon.category == EnemyMeleeWeaponCategory.Spear && meleeWeapon.holdType == WeaponHoldType.TwoHand)
+        {
+            float multiplier = enemy != null && enemy.enemyData != null
+                ? enemy.enemyData.spearPatrolSpeedMultiplier
+                : DefaultSpearPatrolSpeedMultiplier;
+            return Mathf.Max(0.1f, multiplier);
+        }
+
+        return 1f;
     }
 
     float GetAttackRange()
     {
-        if (useRangedWeaponAttack && rangedWeaponController != null && rangedWeaponController.CurrentWeapon != null)
+        if (rangedWeaponController != null && rangedWeaponController.CurrentWeapon != null)
         {
             return rangedWeaponController.EffectiveAttackRange;
         }
 
-        if (useMeleeWeaponAttack && meleeWeaponController != null && meleeWeaponController.CurrentWeapon != null)
+        if (meleeWeaponController != null && meleeWeaponController.CurrentWeapon != null)
         {
             return meleeWeaponController.EffectiveAttackRange;
         }
 
-        if (useUnarmedAttackWhenNoWeapon && enemy != null && enemy.enemyData != null)
+        if (enemy != null && enemy.enemyData != null)
         {
             return GetModifiedEnemyStat(StatusEffectStat.EnemyAttackRange, enemy.enemyData.attackRange)
                 + GetModifiedEnemyStat(StatusEffectStat.EnemyAttackHitRadius, enemy.enemyData.attackHitRadius);
@@ -1091,6 +1301,15 @@ public class EnemyAI : MonoBehaviour
             celebrationRoutine = null;
         }
 
+        if (alertRoutine != null)
+        {
+            StopCoroutine(alertRoutine);
+            alertRoutine = null;
+        }
+
+        isAlerting = false;
+        SetLocomotionSuppressed(false);
+
         CancelUnarmedAttack();
 
         if (supportBuffRoutine != null)
@@ -1143,13 +1362,13 @@ public class EnemyAI : MonoBehaviour
 
     void TryAttackPlayer()
     {
-        if (useRangedWeaponAttack && rangedWeaponController != null && rangedWeaponController.CurrentWeapon != null)
+        if (rangedWeaponController != null && rangedWeaponController.CurrentWeapon != null)
         {
             rangedWeaponController.TryAttack(playerTarget);
             return;
         }
 
-        if (useMeleeWeaponAttack && meleeWeaponController != null)
+        if (meleeWeaponController != null)
         {
             if (meleeWeaponController.CurrentWeapon != null)
             {
@@ -1178,7 +1397,7 @@ public class EnemyAI : MonoBehaviour
 
     void TryUnarmedAttack(Transform target)
     {
-        if (!useUnarmedAttackWhenNoWeapon || target == null || enemy == null || enemy.enemyData == null)
+        if (target == null || enemy == null || enemy.enemyData == null)
         {
             return;
         }
@@ -1592,7 +1811,7 @@ public class EnemyAI : MonoBehaviour
 
     void ApplyEnemyDataSettings()
     {
-        if (!useEnemyDataSettings || enemy == null || enemy.enemyData == null)
+        if (enemy == null || enemy.enemyData == null)
         {
             return;
         }
@@ -1608,13 +1827,15 @@ public class EnemyAI : MonoBehaviour
         shotAlertMinDuration = data.shotAlertMinDuration;
         shotAlertMaxDuration = data.shotAlertMaxDuration;
         idleDuration = data.idleDuration;
-        patrolSpeed = data.patrolSpeed;
-        walkSpeedMultiplier = data.walkSpeedMultiplier;
-        chaseSpeed = data.chaseSpeed;
+        agentDestinationUpdateInterval = data.agentDestinationUpdateInterval;
+        agentDestinationChangeThreshold = data.agentDestinationChangeThreshold;
         stoppingDistance = data.stoppingDistance;
         waypointReachDistance = data.waypointReachDistance;
+        patrolNavMeshSampleRadius = data.patrolNavMeshSampleRadius;
+        randomPatrolSampleAttempts = data.randomPatrolSampleAttempts;
         faceMoveDirection = data.faceMoveDirection;
         rotationSpeed = data.rotationSpeed;
+        ApplyUnarmedAttackProfile(data.animationLayers);
         useSupportBehavior = data.useSupportBehavior || data.enemyType == EnemyType.Support;
         supportAllySearchRadius = data.supportAllySearchRadius;
         supportBehindAllyDistance = data.supportBehindAllyDistance;
@@ -1622,6 +1843,52 @@ public class EnemyAI : MonoBehaviour
         supportFleeDistanceFromPlayer = data.supportFleeDistanceFromPlayer;
         supportRepositionOnDamageDuration = data.supportRepositionOnDamageDuration;
         supportDestinationRefreshInterval = data.supportDestinationRefreshInterval;
+        stateUpdateInterval = data.stateUpdateInterval;
+        stateUpdateRandomOffset = data.stateUpdateRandomOffset;
+        activeBehaviourUpdateInterval = data.activeBehaviourUpdateInterval;
+        passiveBehaviourUpdateInterval = data.passiveBehaviourUpdateInterval;
+        missingPlayerLookupInterval = data.missingPlayerLookupInterval;
+    }
+
+    void ApplyUnarmedAttackProfile(EnemyAnimationLayerData[] layers)
+    {
+        EnemyAnimationLayerData attackLayer = null;
+        if (layers != null)
+        {
+            for (int i = 0; i < layers.Length; i++)
+            {
+                EnemyAnimationLayerData layer = layers[i];
+                if (layer != null && layer.actionType == EnemyAnimationActionType.Unarmed && !string.IsNullOrEmpty(layer.layerName) && layer.attackStateNames != null && layer.attackStateNames.Length > 0)
+                {
+                    attackLayer = layer;
+                    break;
+                }
+            }
+        }
+
+        if (attackLayer == null)
+        {
+            unarmedAttackLayerName = "Unarmed";
+            unarmedAttackStateMachineNames = System.Array.Empty<string>();
+            unarmedAttackStateNames = new[]
+            {
+                "Unarmed-Attack-L1",
+                "Unarmed-Attack-R1",
+                "Unarmed-Attack-L2",
+                "Unarmed-Attack-R2",
+                "Unarmed-Attack-L3",
+                "Unarmed-Attack-R3"
+            };
+            unarmedAttackCrossFade = 0.08f;
+            unarmedAttackLayerIndex = -1;
+            return;
+        }
+
+        unarmedAttackLayerName = attackLayer.layerName;
+        unarmedAttackStateMachineNames = System.Array.Empty<string>();
+        unarmedAttackStateNames = attackLayer.attackStateNames;
+        unarmedAttackCrossFade = Mathf.Max(0f, attackLayer.attackCrossFade);
+        unarmedAttackLayerIndex = -1;
     }
 
     void UpdateVoice()
@@ -1815,11 +2082,6 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        if (hasSpeedParameter)
-        {
-            animator.SetFloat(speedParameter, patrolSpeed);
-        }
-
         if (hasChaseParameter)
         {
             animator.SetBool(chaseParameter, false);
@@ -1859,20 +2121,12 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        float speed = 0f;
-        bool isMoving = agent == null || !agent.enabled || !agent.isOnNavMesh || agent.velocity.sqrMagnitude > 0.01f;
-        if (isMoving && currentState == EnemyAIState.Patrol)
-        {
-            speed = GetModifiedEnemyStat(StatusEffectStat.EnemyPatrolSpeed, patrolSpeed);
-        }
-        else if (isMoving && currentState == EnemyAIState.Chase)
-        {
-            speed = GetModifiedEnemyStat(StatusEffectStat.EnemyChaseSpeed, chaseSpeed);
-        }
+        bool isMoving = HasLocomotionMovementIntent();
 
         if (hasSpeedParameter)
         {
-            animator.SetFloat(speedParameter, speed, animatorSpeedDampTime, Mathf.Max(0.001f, deltaTime));
+            float speed = GetSmoothedAgentSpeed(isMoving, deltaTime);
+            animator.SetFloat(speedParameter, speed);
         }
 
         if (hasChaseParameter)
@@ -1885,8 +2139,81 @@ public class EnemyAI : MonoBehaviour
         if (locomotionSuppressionCount == 0)
         {
             ConfigureLocomotionLayer();
+            // UpdateWeaponLocomotionState will be called via ConfigureLocomotionLayer restoration
             UpdateWeaponLocomotionState(isMoving);
         }
+        else
+        {
+            // Ensure suppressed locomotion doesn't have stale weights
+            if (activeWeaponLocomotionLayer > 0 && animator != null)
+            {
+                if (animator.GetLayerWeight(activeWeaponLocomotionLayer) > 0.01f)
+                {
+                    animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+                }
+            }
+        }
+    }
+
+    float GetSmoothedAgentSpeed(bool isMoving, float deltaTime)
+    {
+        float targetSpeed = 0f;
+        if (isMoving)
+        {
+            if (currentState == EnemyAIState.Patrol)
+            {
+                targetSpeed = GetWalkMoveSpeed();
+            }
+            else if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                targetSpeed = agent.speed;
+            }
+            else
+            {
+                targetSpeed = GetMoveSpeed();
+            }
+        }
+
+        float smoothingTime = Mathf.Max(0.03f, animatorSpeedDampTime);
+        float safeDeltaTime = Mathf.Max(0.008f, deltaTime);
+        
+        smoothedAnimatorSpeed = Mathf.SmoothDamp(
+            smoothedAnimatorSpeed,
+            targetSpeed,
+            ref animatorSpeedVelocity,
+            smoothingTime,
+            Mathf.Infinity,
+            safeDeltaTime);
+        
+        return smoothedAnimatorSpeed;
+    }
+
+    bool HasLocomotionMovementIntent()
+    {
+        if (currentState == EnemyAIState.Attack || currentState == EnemyAIState.Idle || isAlerting || isCelebrating || IsStunned)
+        {
+            return false;
+        }
+
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+        {
+            return currentState == EnemyAIState.Patrol ? hasDestination : currentState == EnemyAIState.Chase;
+        }
+
+        if (agent.isStopped)
+        {
+            return false;
+        }
+
+        // Keep locomotion active while NavMesh briefly decelerates or rebuilds
+        // a path. Using raw velocity here made walk/idle alternate frame by frame.
+        if (agent.pathPending)
+        {
+            return currentState == EnemyAIState.Patrol ? hasDestination : currentState == EnemyAIState.Chase;
+        }
+
+        float stopBuffer = Mathf.Max(0.05f, agent.stoppingDistance + 0.05f);
+        return agent.hasPath && agent.remainingDistance > stopBuffer;
     }
 
     void UpdateWeaponLocomotionState(bool isMoving)
@@ -1896,8 +2223,15 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        if (TryGetProfileLocomotionState(isMoving, out string profileLayerName, out string profileStateName, out float profileCrossFade) &&
+            PlayLocomotionState(profileLayerName, profileStateName, profileCrossFade))
+        {
+            return;
+        }
+
         string layerName = null;
         string stateName = null;
+        float crossFadeDuration = weaponLocomotionCrossFade;
 
         EnemyRangedWeapon rangedWeapon = rangedWeaponController != null
             ? rangedWeaponController.CurrentWeapon ?? rangedWeaponController.startingWeapon
@@ -1908,6 +2242,8 @@ public class EnemyAI : MonoBehaviour
             stateName = isMoving
                 ? (currentState == EnemyAIState.Chase ? crossbowRunStateName : crossbowWalkStateName)
                 : crossbowIdleStateName;
+            // Increase crossfade for smoother patrol transitions
+            crossFadeDuration = Mathf.Max(weaponLocomotionCrossFade, 0.15f);
         }
         else
         {
@@ -1920,31 +2256,103 @@ public class EnemyAI : MonoBehaviour
                 stateName = isMoving
                     ? (currentState == EnemyAIState.Chase ? spearRunStateName : spearWalkStateName)
                     : spearIdleStateName;
+                // Increase crossfade for smoother patrol transitions
+                crossFadeDuration = Mathf.Max(weaponLocomotionCrossFade, 0.15f);
             }
         }
 
         if (string.IsNullOrEmpty(layerName) || string.IsNullOrEmpty(stateName))
         {
+            // Clear invalid weapon layer
+            if (activeWeaponLocomotionLayer > 0 && animator != null)
+            {
+                animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+            }
             activeWeaponLocomotionLayer = -1;
             activeWeaponLocomotionStateHash = 0;
             return;
         }
 
+        PlayLocomotionState(layerName, stateName, crossFadeDuration);
+    }
+
+    bool TryGetProfileLocomotionState(bool isMoving, out string layerName, out string stateName, out float crossFade)
+    {
+        layerName = null;
+        stateName = null;
+        crossFade = weaponLocomotionCrossFade;
+
+        EnemyAnimationLayerData[] layers = enemy != null && enemy.enemyData != null ? enemy.enemyData.animationLayers : null;
+        if (layers == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < layers.Length; i++)
+        {
+            EnemyAnimationLayerData layer = layers[i];
+            if (layer == null || string.IsNullOrEmpty(layer.layerName))
+            {
+                continue;
+            }
+
+            string selectedState = isMoving
+                ? (currentState == EnemyAIState.Chase ? layer.chaseStateName : layer.patrolStateName)
+                : layer.idleStateName;
+            if (string.IsNullOrEmpty(selectedState))
+            {
+                continue;
+            }
+
+            layerName = layer.layerName;
+            stateName = selectedState;
+            crossFade = Mathf.Max(0f, layer.locomotionCrossFade);
+            return true;
+        }
+
+        return false;
+    }
+
+    bool PlayLocomotionState(string layerName, string stateName, float crossFade)
+    {
+        if (animator == null || string.IsNullOrEmpty(layerName) || string.IsNullOrEmpty(stateName))
+        {
+            return false;
+        }
+
         int layerIndex = animator.GetLayerIndex(layerName);
         if (layerIndex <= 0)
         {
-            return;
+            return false;
         }
 
         int stateHash = GetAnimatorStateHash(layerIndex, layerName, stateName);
-        if (stateHash == 0 || (activeWeaponLocomotionLayer == layerIndex && activeWeaponLocomotionStateHash == stateHash))
+        if (stateHash == 0)
         {
-            return;
+            return false;
         }
 
-        animator.CrossFadeInFixedTime(stateHash, weaponLocomotionCrossFade, layerIndex);
+        if (activeWeaponLocomotionLayer == layerIndex && activeWeaponLocomotionStateHash == stateHash)
+        {
+            // Ensure layer weight is at full strength even if skipping state change
+            if (animator.GetLayerWeight(layerIndex) < 0.99f)
+            {
+                animator.SetLayerWeight(layerIndex, 1f);
+            }
+            return true;
+        }
+
+        // Clear previous weapon layer if different
+        if (activeWeaponLocomotionLayer > 0 && activeWeaponLocomotionLayer != layerIndex)
+        {
+            animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+        }
+
+        animator.CrossFadeInFixedTime(stateHash, crossFade, layerIndex);
+        animator.SetLayerWeight(layerIndex, 1f);
         activeWeaponLocomotionLayer = layerIndex;
         activeWeaponLocomotionStateHash = stateHash;
+        return true;
     }
 
     void CacheAnimatorParameters()
@@ -2004,13 +2412,45 @@ public class EnemyAI : MonoBehaviour
             ? GetPreferredLocomotionLayerIndex()
             : -1;
 
-        // Enemy layers are all full-body overrides. Keeping exactly one
-        // overlay active prevents locomotion from hiding an action layer.
-        EnemyAnimationLayers.SetExclusiveLayer(animator, locomotionLayer);
+        // Enemy layers are full-body overrides. When no reaction/action owns
+        // the Animator, restore exactly one locomotion layer and remove stale
+        // low-priority overlays left by interrupted actions.
+        if (locomotionLayer > 0)
+        {
+            EnemyAnimationLayers.RestoreLocomotionLayer(animator, locomotionLayer);
+            // Ensure weapon locomotion layer is cleared when restoring base locomotion
+            if (activeWeaponLocomotionLayer > 0 && activeWeaponLocomotionLayer != locomotionLayer)
+            {
+                animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+                activeWeaponLocomotionLayer = -1;
+                activeWeaponLocomotionStateHash = 0;
+            }
+        }
+        else
+        {
+            EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
+            // Clear weapon layer when exclusive mode is active
+            if (activeWeaponLocomotionLayer > 0)
+            {
+                animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+                activeWeaponLocomotionLayer = -1;
+                activeWeaponLocomotionStateHash = 0;
+            }
+        }
     }
 
     int GetPreferredLocomotionLayerIndex()
     {
+        string profileLayerName = GetProfileLocomotionLayerName();
+        if (!string.IsNullOrEmpty(profileLayerName))
+        {
+            int profileLayerIndex = animator.GetLayerIndex(profileLayerName);
+            if (profileLayerIndex > 0)
+            {
+                return profileLayerIndex;
+            }
+        }
+
         bool hasMeleeWeapon = meleeWeaponController != null &&
                               (meleeWeaponController.CurrentWeapon != null || meleeWeaponController.startingWeapon != null);
         bool hasRangedWeapon = rangedWeaponController != null &&
@@ -2063,6 +2503,29 @@ public class EnemyAI : MonoBehaviour
         return animator.GetLayerIndex(fallbackLayerName);
     }
 
+    string GetProfileLocomotionLayerName()
+    {
+        EnemyAnimationLayerData[] layers = enemy != null && enemy.enemyData != null
+            ? enemy.enemyData.animationLayers
+            : null;
+
+        if (layers == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < layers.Length; i++)
+        {
+            EnemyAnimationLayerData layer = layers[i];
+            if (layer != null && !string.IsNullOrEmpty(layer.layerName))
+            {
+                return layer.layerName;
+            }
+        }
+
+        return null;
+    }
+
     public void SetLocomotionSuppressed(bool suppressed)
     {
         locomotionSuppressionCount = Mathf.Max(0, locomotionSuppressionCount + (suppressed ? 1 : -1));
@@ -2089,6 +2552,13 @@ public class EnemyAI : MonoBehaviour
         }
 
         StopUnarmedAttackFade();
+        if (!isActiveAndEnabled)
+        {
+            animator.SetLayerWeight(layerIndex, targetWeight);
+            unarmedAttackFadeTarget = -1f;
+            return;
+        }
+
         unarmedAttackFadeTarget = targetWeight;
         unarmedAttackFadeRoutine = StartCoroutine(FadeAnimatorLayerWeight(layerIndex, targetWeight, attackLayerFadeOut));
     }
@@ -2113,6 +2583,13 @@ public class EnemyAI : MonoBehaviour
         }
 
         StopSupportBuffFade();
+        if (!isActiveAndEnabled)
+        {
+            animator.SetLayerWeight(layerIndex, targetWeight);
+            supportBuffFadeTarget = -1f;
+            return;
+        }
+
         supportBuffFadeTarget = targetWeight;
         supportBuffFadeRoutine = StartCoroutine(FadeAnimatorLayerWeight(layerIndex, targetWeight, supportBuffLayerFadeOut));
     }

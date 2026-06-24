@@ -28,12 +28,17 @@ public sealed class SceneChanger : MonoBehaviour
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
         ResolveMenuPanels();
+        if (loadingPanel == null)
+        {
+            // This scene contains duplicate legacy SceneChanger components on
+            // UI panels. Only the controller beneath the loading UI is active.
+            enabled = false;
+            return;
+        }
+
         menuButtons = GetComponentsInChildren<Button>(true);
 
-        if (loadingPanel != null)
-        {
-            loadingPanel.SetActive(false);
-        }
+        loadingPanel.SetActive(false);
     }
 
     public void LoadMainGame()
@@ -134,7 +139,6 @@ public sealed class SceneChanger : MonoBehaviour
 
         if (loadingPanel == null)
         {
-            Debug.LogWarning("Loading UI named Loading was not found. Scene loading will continue without a visual transition.", this);
             return;
         }
 

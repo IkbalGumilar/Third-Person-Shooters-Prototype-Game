@@ -21,7 +21,7 @@ MonoBehaviour:
   knockbackResistance: 5
   canBeStunned: 1
   canBeKnockedBack: 1
-  moveSpeed: 2
+  moveSpeed: 5
   autoAddNavMeshAgent: 1
   useRandomPatrolWhenNoPoints: 1
   randomPatrolRadius: 7
@@ -33,16 +33,39 @@ MonoBehaviour:
   shotAlertMaxDuration: 60
   idleDuration: 1.5
   patrolSpeed: 1.8
+  walkSpeedMultiplier: 0.6
   chaseSpeed: 3.5
+  patrolSpeedMultiplier: 1.35
+  crossbowPatrolSpeedMultiplier: 1.85
+  spearPatrolSpeedMultiplier: 1.85
+  maxPatrolSpeedRelativeToChase: 0.75
   stoppingDistance: 0.85
   waypointReachDistance: 0.6
+  patrolNavMeshSampleRadius: 2
+  randomPatrolSampleAttempts: 6
   faceMoveDirection: 1
   rotationSpeed: 7
+  agentDestinationUpdateInterval: 0.12
+  agentDestinationChangeThreshold: 0.15
+  animationLayers: []
+  useSupportBehavior: 0
+  supportAllySearchRadius: 14
+  supportBehindAllyDistance: 3
+  supportFrontlineBuffer: 1.25
+  supportFleeDistanceFromPlayer: 20
+  supportRepositionOnDamageDuration: 3
+  supportDestinationRefreshInterval: 0.35
+  stateUpdateInterval: 0.15
+  stateUpdateRandomOffset: 0.05
+  activeBehaviourUpdateInterval: 0.03
+  passiveBehaviourUpdateInterval: 0.1
+  missingPlayerLookupInterval: 0.25
   attackDamage: 10
   attackRange: 0.9
   attackCooldown: 1
   attackWindup: 0.35
   attackHitRadius: 0.25
+  attackHeavyChance: 0
   attackCriticalChance: 5
   attackCriticalDamagePercent: 50
   attackKnockbackChance: 8

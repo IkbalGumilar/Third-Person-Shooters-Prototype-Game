@@ -387,6 +387,12 @@ public class EnemyMeleeWeaponController : MonoBehaviour
 
     int GetRandomAttackStateHash()
     {
+        int enemyDataStateHash = GetEnemyDataAttackStateHash();
+        if (enemyDataStateHash != 0)
+        {
+            return enemyDataStateHash;
+        }
+
         if (currentWeapon != null && currentWeapon.attackStateNames != null && currentWeapon.attackStateNames.Length > 0)
         {
             int startIndex = Random.Range(0, currentWeapon.attackStateNames.Length);
@@ -402,6 +408,39 @@ public class EnemyMeleeWeaponController : MonoBehaviour
         }
 
         return GetStateHash(fallbackAttackStateName);
+    }
+
+    int GetEnemyDataAttackStateHash()
+    {
+        EnemyAnimationLayerData[] layers = enemy != null && enemy.enemyData != null
+            ? enemy.enemyData.animationLayers
+            : null;
+        if (layers == null)
+        {
+            return 0;
+        }
+
+        string weaponLayerName = GetAttackLayerName();
+        for (int i = 0; i < layers.Length; i++)
+        {
+            EnemyAnimationLayerData layer = layers[i];
+            if (layer == null || layer.actionType != EnemyAnimationActionType.Melee || layer.layerName != weaponLayerName || layer.attackStateNames == null || layer.attackStateNames.Length == 0)
+            {
+                continue;
+            }
+
+            int startIndex = Random.Range(0, layer.attackStateNames.Length);
+            for (int stateIndex = 0; stateIndex < layer.attackStateNames.Length; stateIndex++)
+            {
+                int stateHash = GetStateHash(layer.attackStateNames[(startIndex + stateIndex) % layer.attackStateNames.Length]);
+                if (stateHash != 0)
+                {
+                    return stateHash;
+                }
+            }
+        }
+
+        return 0;
     }
 
     int GetStateHash(string stateName)
@@ -554,6 +593,13 @@ public class EnemyMeleeWeaponController : MonoBehaviour
         }
 
         StopAttackFade();
+        if (!isActiveAndEnabled)
+        {
+            animator.SetLayerWeight(layerIndex, targetWeight);
+            attackFadeTarget = -1f;
+            return;
+        }
+
         attackFadeTarget = targetWeight;
         attackFadeRoutine = StartCoroutine(FadeAnimatorLayerWeight(layerIndex, targetWeight, attackLayerFadeOut));
     }
