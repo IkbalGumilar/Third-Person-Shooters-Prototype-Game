@@ -3,6 +3,8 @@ using UnityEngine;
 
 public sealed class EnemyHitReactionController : MonoBehaviour
 {
+    private const string ReactionLayerOwner = "Enemy.HitReaction";
+
     private static readonly string[] unarmedHitStates =
     {
         "Unarmed-GetHit-F1",
@@ -58,9 +60,8 @@ public sealed class EnemyHitReactionController : MonoBehaviour
             reactionRoutine = null;
         }
 
-        SetLayerWeight(activeLayerIndex, 0f);
+        ReleaseActiveLayer();
         ReleaseLocomotion();
-        activeLayerIndex = -1;
     }
 
     public void PlayHitReaction()
@@ -77,6 +78,15 @@ public sealed class EnemyHitReactionController : MonoBehaviour
             return;
         }
 
+        if (!EnemyAnimationLayers.TryClaimLayer(
+                animator,
+                layerIndex,
+                ReactionLayerOwner,
+                AnimationLayerPriority.Reaction))
+        {
+            return;
+        }
+
         // Attack, support and hit use the same full-body weapon layers. Clear
         // their writers before this controller takes the selected layer.
         meleeWeaponController?.InterruptForHitReaction();
@@ -86,11 +96,10 @@ public sealed class EnemyHitReactionController : MonoBehaviour
 
         if (activeLayerIndex >= 0 && activeLayerIndex != layerIndex)
         {
-            SetLayerWeight(activeLayerIndex, 0f);
+            ReleaseActiveLayer();
         }
 
         activeLayerIndex = layerIndex;
-        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
         SetLayerWeight(layerIndex, 1f);
         animator.CrossFadeInFixedTime(stateHash, crossFadeDuration, layerIndex, 0f);
         reactionRoutine = StartCoroutine(FadeReactionAfterState(layerIndex));
@@ -104,9 +113,8 @@ public sealed class EnemyHitReactionController : MonoBehaviour
             reactionRoutine = null;
         }
 
-        SetLayerWeight(activeLayerIndex, 0f);
+        ReleaseActiveLayer();
         ReleaseLocomotion();
-        activeLayerIndex = -1;
     }
 
     bool TryResolveReaction(string layerName, out int layerIndex, out int stateHash)
@@ -226,7 +234,7 @@ public sealed class EnemyHitReactionController : MonoBehaviour
 
         if (activeLayerIndex == layerIndex)
         {
-            activeLayerIndex = -1;
+            ReleaseActiveLayer();
         }
 
         ReleaseLocomotion();
@@ -259,7 +267,21 @@ public sealed class EnemyHitReactionController : MonoBehaviour
     {
         if (animator != null && layerIndex > 0)
         {
-            animator.SetLayerWeight(layerIndex, Mathf.Clamp01(weight));
+            AnimationLayerGuard guard = animator.GetComponent<AnimationLayerGuard>();
+            if (guard == null || !guard.SetWeight(layerIndex, ReactionLayerOwner, weight))
+            {
+                animator.SetLayerWeight(layerIndex, Mathf.Clamp01(weight));
+            }
         }
+    }
+
+    void ReleaseActiveLayer()
+    {
+        if (activeLayerIndex >= 0)
+        {
+            EnemyAnimationLayers.ReleaseLayer(animator, activeLayerIndex, ReactionLayerOwner);
+        }
+
+        activeLayerIndex = -1;
     }
 }

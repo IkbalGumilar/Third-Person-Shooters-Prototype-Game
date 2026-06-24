@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+    private const string DeathLayerOwner = "Enemy.Death";
+
     private static readonly List<Enemy> activeEnemies = new List<Enemy>();
 
     public EnemyData enemyData;
@@ -106,6 +108,14 @@ public class Enemy : MonoBehaviour
     void OnDisable()
     {
         activeEnemies.Remove(this);
+        if (deathRoutine != null)
+        {
+            StopCoroutine(deathRoutine);
+            deathRoutine = null;
+        }
+
+        hitReactionController?.StopHitReaction();
+        EnemyAnimationLayers.ReleaseOwner(animator, DeathLayerOwner);
     }
 
     void RegisterActiveEnemy()
@@ -413,7 +423,7 @@ public class Enemy : MonoBehaviour
         }
 
         animator.speed = 1f;
-        EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
+        EnemyAnimationLayers.ReleaseLowerPriority(animator, AnimationLayerPriority.Death);
     }
 
     bool HasAnimatorTrigger(string parameterName)
@@ -535,7 +545,16 @@ public class Enemy : MonoBehaviour
             return false;
         }
 
-        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
+        if (!EnemyAnimationLayers.TryClaimLayer(
+                animator,
+                layerIndex,
+                DeathLayerOwner,
+                AnimationLayerPriority.Death,
+                true))
+        {
+            return false;
+        }
+
         animator.Play(stateHash, layerIndex, 0f);
         return true;
     }

@@ -5,6 +5,9 @@ using UnityEngine.AI;
 
 public class EnemyShieldController : MonoBehaviour
 {
+    private const string DefenseLayerOwner = "Enemy.ShieldDefense";
+    private const string ShieldBreakLayerOwner = "Enemy.ShieldBreak";
+
     static Transform cachedPlayerTarget;
 
     public bool enableShieldBehavior = true;
@@ -132,6 +135,17 @@ public class EnemyShieldController : MonoBehaviour
         cachedRangedAlly = null;
         hasAgentDestination = false;
         FindPlayer();
+    }
+
+    void OnDisable()
+    {
+        StopShieldActions();
+        StopMoving();
+        SetDefenseLayerWeightImmediate(0f);
+        EnemyAnimationLayers.ReleaseOwner(animator, DefenseLayerOwner);
+        EnemyAnimationLayers.ReleaseOwner(animator, ShieldBreakLayerOwner);
+        locomotionSuppressed = false;
+        synchronizedAttackQueued = false;
     }
 
     void Update()
@@ -701,7 +715,16 @@ public class EnemyShieldController : MonoBehaviour
         }
 
         StopDefenseFade();
-        EnemyAnimationLayers.SetExclusiveLayer(animator, layer);
+        if (!EnemyAnimationLayers.TryClaimLayer(
+                animator,
+                layer,
+                DefenseLayerOwner,
+                AnimationLayerPriority.Reaction,
+                true))
+        {
+            return;
+        }
+
         if (activeDefenseStateName == stateName)
         {
             AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(layer);
@@ -932,7 +955,16 @@ public class EnemyShieldController : MonoBehaviour
         }
 
         StopDefenseFade();
-        EnemyAnimationLayers.SetExclusiveLayer(animator, layer);
+        bool isDefenseLayer = layer == GetDefenseLayerIndex();
+        string owner = isDefenseLayer ? DefenseLayerOwner : ShieldBreakLayerOwner;
+        AnimationLayerPriority priority = isDefenseLayer
+            ? AnimationLayerPriority.Reaction
+            : AnimationLayerPriority.GuardBreak;
+        if (!EnemyAnimationLayers.TryClaimLayer(animator, layer, owner, priority, true))
+        {
+            return false;
+        }
+
         animator.Play(stateHash, layer, 0f);
         return true;
     }
@@ -944,7 +976,16 @@ public class EnemyShieldController : MonoBehaviour
             return;
         }
 
-        EnemyAnimationLayers.SetExclusiveLayer(animator, preservedLayer);
+        EnemyAnimationLayers.ReleaseLowerPriority(animator, AnimationLayerPriority.GuardBreak);
+        if (preservedLayer > 0)
+        {
+            EnemyAnimationLayers.TryClaimLayer(
+                animator,
+                preservedLayer,
+                ShieldBreakLayerOwner,
+                AnimationLayerPriority.GuardBreak,
+                true);
+        }
     }
 
     void SetDefenseLayerWeightImmediate(float weight)
@@ -953,12 +994,13 @@ public class EnemyShieldController : MonoBehaviour
         int layer = GetDefenseLayerIndex();
         if (layer >= 0 && animator != null)
         {
-            animator.SetLayerWeight(layer, weight);
+            SetDefenseLayerWeight(layer, weight);
         }
 
         if (weight <= 0f)
         {
             activeDefenseStateName = null;
+            EnemyAnimationLayers.ReleaseLayer(animator, layer, DefenseLayerOwner);
         }
     }
 
@@ -1065,14 +1107,15 @@ public class EnemyShieldController : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            animator.SetLayerWeight(layer, Mathf.Lerp(startWeight, targetWeight, elapsed / duration));
+            SetDefenseLayerWeight(layer, Mathf.Lerp(startWeight, targetWeight, elapsed / duration));
             yield return null;
         }
 
-        animator.SetLayerWeight(layer, targetWeight);
+        SetDefenseLayerWeight(layer, targetWeight);
         if (targetWeight <= 0f)
         {
             activeDefenseStateName = null;
+            EnemyAnimationLayers.ReleaseLayer(animator, layer, DefenseLayerOwner);
         }
 
         defenseFadeRoutine = null;
@@ -1084,6 +1127,15 @@ public class EnemyShieldController : MonoBehaviour
         {
             StopCoroutine(defenseFadeRoutine);
             defenseFadeRoutine = null;
+        }
+    }
+
+    void SetDefenseLayerWeight(int layer, float weight)
+    {
+        AnimationLayerGuard guard = animator != null ? animator.GetComponent<AnimationLayerGuard>() : null;
+        if (guard == null || !guard.SetWeight(layer, DefenseLayerOwner, weight))
+        {
+            animator?.SetLayerWeight(layer, Mathf.Clamp01(weight));
         }
     }
 

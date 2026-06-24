@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 
 [System.Serializable]
 public class FootstepSurfaceAudio
@@ -13,6 +12,8 @@ public class FootstepSurfaceAudio
 
 public class PlayerMovement : MonoBehaviour
 {
+    private const string ReactionLayerOwner = "Player.Reaction";
+
     private static readonly string[] unarmedMovementLayers =
     {
         "Unarmed-Locomotion",
@@ -156,6 +157,7 @@ public class PlayerMovement : MonoBehaviour
     public PlayerWeaponEquip weaponEquip;
     public PlayerWeaponAnimator weaponAnimator;
     public PlayerAimIK aimIK;
+    public PlayerGuardBreak guardBreak;
     public string unarmedReactionLayerName = "Unarmed-Hit";
     public string oneHandReactionLayerName = "Armed-Hit";
     public string twoHandReactionLayerName = "2Hand-Shooting-Hit";
@@ -167,17 +169,17 @@ public class PlayerMovement : MonoBehaviour
     public string twoHandKnockbackState2 = "Shooting-Knockback-Back2";
     public float knockbackAnimationFade = 0.06f;
 
-    [Header("Guard Break")]
-    public float guardBreakDuration = 3f;
-    public float guardBreakInputReduction = 1f;
-    public float guardBreakInputDelay = 0.1f;
-    public float guardBreakKnockbackDistance = 1.5f;
-    public float guardBreakKnockbackDuration = 0.25f;
-    public float guardBreakGetUpFallbackDuration = 0.8f;
-    public float guardBreakGetUpMaxDuration = 3f;
-    [Min(0.1f)] public float guardBreakGetUpStartSpeed = 3f;
-    [Min(0.1f)] public float guardBreakGetUpInputSpeedStep = 1f;
-    [Min(0.1f)] public float guardBreakGetUpMaxSpeed = 5f;
+    // Retained only to migrate old scenes that do not yet have PlayerGuardBreak.
+    [HideInInspector] public float guardBreakDuration = 3f;
+    [HideInInspector] public float guardBreakInputReduction = 1f;
+    [HideInInspector] public float guardBreakInputDelay = 0.1f;
+    [HideInInspector] public float guardBreakKnockbackDistance = 1.5f;
+    [HideInInspector] public float guardBreakKnockbackDuration = 0.25f;
+    [HideInInspector] public float guardBreakGetUpFallbackDuration = 0.8f;
+    [HideInInspector] public float guardBreakGetUpMaxDuration = 3f;
+    [HideInInspector] public float guardBreakGetUpStartSpeed = 3f;
+    [HideInInspector] public float guardBreakGetUpInputSpeedStep = 1f;
+    [HideInInspector] public float guardBreakGetUpMaxSpeed = 5f;
     public string unarmedKnockdownState = "Unarmed-Knockdown1";
     public string unarmedGetUpState = "Unarmed-Getup1";
     public string unarmedGetUpLayerName = "Unarmed-Death-Revive";
@@ -216,15 +218,7 @@ public class PlayerMovement : MonoBehaviour
     private bool fallAnimationStarted;
     private bool isCrouching;
     private bool isCrawling;
-    private bool isGuardBroken;
-    private bool isGuardBreakGettingUp;
-    private float guardBreakEndsAt;
-    private float guardBreakInputAllowedAt;
-    private float guardBreakGetUpEndsAt;
-    private float guardBreakGetUpForceEndAt;
-    private float guardBreakGetUpSpeed;
-    private float previousAnimatorSpeed = 1f;
-    private bool isOverridingAnimatorSpeed;
+    private AnimationLayerGuard animationLayerGuard;
     private int activeReactionLayerIndex = -1;
     private int activeReactionStateHash;
     private float standingControllerHeight;
@@ -258,7 +252,7 @@ public class PlayerMovement : MonoBehaviour
 
     public float CurrentStamina => currentStamina;
     public bool IsStaminaExhausted => isStaminaExhausted;
-    public bool IsGuardBroken => isGuardBroken;
+    public bool IsGuardBroken => guardBreak != null && guardBreak.IsActive;
     public float ExhaustedRecoveryStamina => GetExhaustedRecoveryStamina();
     public bool CanUseStaminaActionPublic => CanUseStaminaAction();
 
@@ -310,6 +304,7 @@ public class PlayerMovement : MonoBehaviour
         if (animator != null)
         {
             AnimationEventReceiver.EnsureOn(animator);
+            animationLayerGuard = AnimationLayerGuard.GetOrAdd(animator);
             baseLayerIndex = animator.GetLayerIndex(baseLayerName);
             if (baseLayerIndex < 0)
             {
@@ -323,6 +318,29 @@ public class PlayerMovement : MonoBehaviour
         weaponEquip = weaponEquip != null ? weaponEquip : GetComponent<PlayerWeaponEquip>();
         weaponAnimator = weaponAnimator != null ? weaponAnimator : GetComponent<PlayerWeaponAnimator>();
         aimIK = aimIK != null ? aimIK : GetComponent<PlayerAimIK>();
+        if (guardBreak == null)
+        {
+            guardBreak = GetComponent<PlayerGuardBreak>();
+        }
+
+        if (guardBreak == null)
+        {
+            guardBreak = gameObject.AddComponent<PlayerGuardBreak>();
+            guardBreak.ApplyLegacySettings(
+                guardBreakDuration,
+                guardBreakInputReduction,
+                guardBreakInputDelay,
+                guardBreakKnockbackDistance,
+                guardBreakKnockbackDuration,
+                guardBreakGetUpFallbackDuration,
+                guardBreakGetUpMaxDuration,
+                guardBreakGetUpStartSpeed,
+                guardBreakGetUpInputSpeedStep,
+                guardBreakGetUpMaxSpeed
+            );
+        }
+
+        guardBreak.Initialize(this);
 
         ApplyLocomotionProfile(null, false);
 
@@ -347,7 +365,8 @@ public class PlayerMovement : MonoBehaviour
     void OnDisable()
     {
         kontrolPemain?.Disable();
-        EndGuardBreak(true);
+        StopAnimationRoutinesForCleanup();
+        guardBreak?.CancelImmediate();
     }
 
     void OnDestroy()
@@ -357,9 +376,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (isGuardBroken)
+        if (IsGuardBroken)
         {
-            UpdateGuardBreak();
             return;
         }
 
@@ -388,7 +406,7 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (!isGuardBroken)
+        if (!IsGuardBroken)
         {
             PlayKnockbackAnimation();
         }
@@ -403,33 +421,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void TriggerGuardBreak(Vector3 knockbackDirection, bool usesIncomingKnockback)
     {
-        if (isGuardBroken)
-        {
-            return;
-        }
-
-        isGuardBroken = true;
-        isGuardBreakGettingUp = false;
-        guardBreakEndsAt = Time.time + Mathf.Max(0f, guardBreakDuration);
-        guardBreakInputAllowedAt = Time.time + Mathf.Max(0f, guardBreakInputDelay);
-        StopBaseActionRoutine();
-        StopReactionFade();
-        StopLocomotionForInputFreeze();
-        UpdateFootstepAudio(false, false);
-
-        if (playerShoot != null)
-        {
-            playerShoot.externalActionBlocksInput = true;
-        }
-
-        weaponAnimator?.SetExternalActionOverride(true);
-        aimIK?.SetExternalPoseOverride(true);
-        PlayReactionState(GetKnockdownState(), out _);
-
-        if (!usesIncomingKnockback)
-        {
-            ApplyKnockback(knockbackDirection, guardBreakKnockbackDistance, guardBreakKnockbackDuration);
-        }
+        guardBreak?.Trigger(knockbackDirection, usesIncomingKnockback);
     }
 
     public bool MoveActionAlongGround(Vector3 horizontalDisplacement)
@@ -504,46 +496,7 @@ public class PlayerMovement : MonoBehaviour
         knockbackRoutine = null;
     }
 
-    void UpdateGuardBreak()
-    {
-        UpdateGuardBreakGravity();
-
-        if (!isGuardBreakGettingUp)
-        {
-            if (Time.time >= guardBreakInputAllowedAt && WasAnyRecoveryInputPressed())
-            {
-                guardBreakEndsAt = Mathf.Max(Time.time, guardBreakEndsAt - Mathf.Max(0f, guardBreakInputReduction));
-            }
-
-            if (Time.time >= guardBreakEndsAt)
-            {
-                BeginGuardBreakGetUp();
-            }
-
-            return;
-        }
-
-        if (WasAnyRecoveryInputPressed())
-        {
-            guardBreakGetUpSpeed = Mathf.Min(
-                Mathf.Max(guardBreakGetUpStartSpeed, guardBreakGetUpMaxSpeed),
-                guardBreakGetUpSpeed + Mathf.Max(0f, guardBreakGetUpInputSpeedStep)
-            );
-            ApplyGuardBreakGetUpSpeed();
-            guardBreakGetUpEndsAt = Mathf.Min(
-                guardBreakGetUpEndsAt,
-                Time.time + GetGuardBreakGetUpTime(guardBreakGetUpFallbackDuration)
-            );
-        }
-
-        if (Time.time >= guardBreakGetUpEndsAt
-            && (HasActiveReactionFinished() || Time.time >= guardBreakGetUpForceEndAt))
-        {
-            EndGuardBreak(false);
-        }
-    }
-
-    void UpdateGuardBreakGravity()
+    public void UpdateExternalActionGravity()
     {
         if (controller == null || !controller.enabled)
         {
@@ -562,121 +515,44 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(Vector3.up * verticalVelocity * Time.deltaTime);
     }
 
-    bool WasAnyRecoveryInputPressed()
+    void StopAnimationRoutinesForCleanup()
     {
-        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
+        StopBaseActionRoutine();
+        StopReactionFade();
+        if (knockbackRoutine != null)
         {
-            return true;
+            StopCoroutine(knockbackRoutine);
+            knockbackRoutine = null;
         }
 
-        if (Mouse.current != null
-            && (Mouse.current.leftButton.wasPressedThisFrame
-                || Mouse.current.rightButton.wasPressedThisFrame
-                || Mouse.current.middleButton.wasPressedThisFrame
-                || Mouse.current.forwardButton.wasPressedThisFrame
-                || Mouse.current.backButton.wasPressedThisFrame))
-        {
-            return true;
-        }
-
-        return WasGamepadOrJoystickButtonPressed(Gamepad.current)
-            || WasGamepadOrJoystickButtonPressed(Joystick.current);
+        ReleaseActiveReactionLayer();
+        isRollingAction = false;
+        SetAnimatorBool("IsRolling", false);
     }
 
-    bool WasGamepadOrJoystickButtonPressed(InputDevice device)
+    public void StopBaseActionForExternalAction()
     {
-        if (device == null)
-        {
-            return false;
-        }
-
-        foreach (InputControl control in device.allControls)
-        {
-            if (control is ButtonControl button && button.wasPressedThisFrame)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        StopBaseActionRoutine();
+        StopReactionFade();
+        UpdateFootstepAudio(false, false);
     }
 
-    void BeginGuardBreakGetUp()
+    public bool PlayGuardBreakReaction(bool getUp, out float duration)
     {
-        isGuardBreakGettingUp = true;
-        guardBreakGetUpSpeed = Mathf.Max(0.1f, guardBreakGetUpStartSpeed);
-        ApplyGuardBreakGetUpSpeed();
-        float duration = PlayReactionState(GetGetUpState(), out float stateDuration, true, GetGetUpLayerName())
-            ? stateDuration
-            : guardBreakGetUpFallbackDuration;
-        guardBreakGetUpEndsAt = Time.time + GetGuardBreakGetUpTime(guardBreakGetUpFallbackDuration);
-        guardBreakGetUpForceEndAt = Time.time + GetGuardBreakGetUpTime(Mathf.Max(
-            Mathf.Max(0.05f, duration),
-            Mathf.Max(0.1f, guardBreakGetUpMaxDuration)
-        ));
+        return getUp
+            ? PlayReactionState(GetGetUpState(), out duration, true, GetGetUpLayerName())
+            : PlayReactionState(GetKnockdownState(), out duration);
     }
 
-    void EndGuardBreak(bool immediate)
+    public bool HasGuardBreakReactionFinished()
     {
-        if (!isGuardBroken && !immediate)
-        {
-            return;
-        }
-
-        isGuardBroken = false;
-        isGuardBreakGettingUp = false;
-        guardBreakEndsAt = 0f;
-        guardBreakGetUpEndsAt = 0f;
-        guardBreakGetUpForceEndAt = 0f;
-        guardBreakGetUpSpeed = 0f;
-        guardBreakInputAllowedAt = 0f;
-        if (activeReactionLayerIndex >= 0 && animator != null)
-        {
-            animator.SetLayerWeight(activeReactionLayerIndex, 0f);
-        }
-
-        activeReactionLayerIndex = -1;
-        activeReactionStateHash = 0;
-        RestoreAnimatorSpeed();
-        if (playerShoot != null)
-        {
-            playerShoot.externalActionBlocksInput = false;
-        }
-
-        weaponAnimator?.SetExternalActionOverride(false);
-        aimIK?.SetExternalPoseOverride(false);
+        return HasActiveReactionFinished();
     }
 
-    void ApplyGuardBreakGetUpSpeed()
+    public void ClearGuardBreakReaction()
     {
-        if (animator == null)
-        {
-            return;
-        }
-
-        if (!isOverridingAnimatorSpeed)
-        {
-            previousAnimatorSpeed = animator.speed;
-            isOverridingAnimatorSpeed = true;
-        }
-
-        animator.speed = Mathf.Max(0.1f, guardBreakGetUpSpeed);
-    }
-
-    float GetGuardBreakGetUpTime(float baseDuration)
-    {
-        return Mathf.Max(0.05f, baseDuration) / Mathf.Max(0.1f, guardBreakGetUpSpeed);
-    }
-
-    void RestoreAnimatorSpeed()
-    {
-        if (animator != null && isOverridingAnimatorSpeed)
-        {
-            animator.speed = previousAnimatorSpeed;
-        }
-
-        isOverridingAnimatorSpeed = false;
-        previousAnimatorSpeed = 1f;
+        StopReactionFade();
+        ReleaseActiveReactionLayer();
     }
 
     void PlayKnockbackAnimation()
@@ -718,14 +594,32 @@ public class PlayerMovement : MonoBehaviour
             return false;
         }
 
+        AnimationLayerPriority priority = IsGuardBroken
+            ? AnimationLayerPriority.GuardBreak
+            : AnimationLayerPriority.Reaction;
+        animationLayerGuard = animationLayerGuard != null
+            ? animationLayerGuard
+            : AnimationLayerGuard.GetOrAdd(animator);
+        if (animationLayerGuard != null && !animationLayerGuard.TryClaim(layerIndex, ReactionLayerOwner, priority))
+        {
+            return false;
+        }
+
         if (activeReactionLayerIndex >= 0 && activeReactionLayerIndex != layerIndex)
         {
-            animator.SetLayerWeight(activeReactionLayerIndex, 0f);
+            ReleaseActiveReactionLayer();
         }
 
         activeReactionLayerIndex = layerIndex;
         activeReactionStateHash = stateHash;
-        animator.SetLayerWeight(layerIndex, 1f);
+        if (animationLayerGuard != null)
+        {
+            animationLayerGuard.SetWeight(layerIndex, ReactionLayerOwner, 1f);
+        }
+        else
+        {
+            animator.SetLayerWeight(layerIndex, 1f);
+        }
         if (restartFromBeginning)
         {
             animator.Play(stateHash, layerIndex, 0f);
@@ -762,11 +656,9 @@ public class PlayerMovement : MonoBehaviour
     {
         yield return new WaitForSeconds(Mathf.Max(0.05f, duration));
         reactionFadeRoutine = null;
-        if (!isGuardBroken && activeReactionLayerIndex >= 0 && animator != null)
+        if (!IsGuardBroken && activeReactionLayerIndex >= 0 && animator != null)
         {
-            animator.SetLayerWeight(activeReactionLayerIndex, 0f);
-            activeReactionLayerIndex = -1;
-            activeReactionStateHash = 0;
+            ReleaseActiveReactionLayer();
         }
     }
 
@@ -777,6 +669,24 @@ public class PlayerMovement : MonoBehaviour
             StopCoroutine(reactionFadeRoutine);
             reactionFadeRoutine = null;
         }
+    }
+
+    void ReleaseActiveReactionLayer()
+    {
+        if (activeReactionLayerIndex >= 0)
+        {
+            if (animationLayerGuard != null)
+            {
+                animationLayerGuard.Release(activeReactionLayerIndex, ReactionLayerOwner);
+            }
+            else if (animator != null)
+            {
+                animator.SetLayerWeight(activeReactionLayerIndex, 0f);
+            }
+        }
+
+        activeReactionLayerIndex = -1;
+        activeReactionStateHash = 0;
     }
 
     string GetReactionLayerName()

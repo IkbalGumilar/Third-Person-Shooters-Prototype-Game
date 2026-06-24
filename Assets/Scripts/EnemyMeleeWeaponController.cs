@@ -61,6 +61,11 @@ public class EnemyMeleeWeaponController : MonoBehaviour
         }
     }
 
+    void OnDisable()
+    {
+        CancelAttack();
+    }
+
     public void EquipWeapon(EnemyMeleeWeapon weapon)
     {
         if (weapon == null)

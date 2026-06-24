@@ -199,6 +199,7 @@ public class EnemyAI : MonoBehaviour
     void OnDisable()
     {
         activeEnemies.Remove(this);
+        StopForDeathAnimation();
     }
 
     void RegisterActiveEnemy()

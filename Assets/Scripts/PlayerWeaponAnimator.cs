@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class PlayerWeaponAnimator : MonoBehaviour
 {
+    private const string SwitchLayerOwner = "Player.WeaponSwitch";
+    private const string ReloadLayerOwner = "Player.WeaponReload";
+    private const string MeleeLayerOwner = "Player.WeaponMelee";
+    private const string ShootLayerOwner = "Player.WeaponShoot";
+
     public Animator animator;
     public string aimLayerName = "lapisan Bidik";
     public string switchLayerName = "Tukar Senjata";
@@ -97,6 +102,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
     private Coroutine meleeTwoHandFadeRoutine;
     private readonly Dictionary<int, Coroutine> meleeFadeRoutines = new Dictionary<int, Coroutine>();
     private int currentMeleeLayerIndex = -1;
+    private AnimationLayerGuard animationLayerGuard;
     private KontrolPemain kontrolPemain;
 
     public bool IsAiming => aimLayerWeight >= shootAimThreshold;
@@ -111,6 +117,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
         kontrolPemain = new KontrolPemain();
         animator = animator != null ? animator : GetComponent<Animator>();
         AnimationEventReceiver.EnsureOn(animator);
+        animationLayerGuard = AnimationLayerGuard.GetOrAdd(animator);
         ResolveAnimatorLayers();
         SetManagedWeaponLayerWeights(0f);
         SetAimLayerWeight(0f);
@@ -128,6 +135,22 @@ public class PlayerWeaponAnimator : MonoBehaviour
     void OnDisable()
     {
         kontrolPemain?.Pemain.Disable();
+        StopAllActionCoroutinesForCleanup();
+        animationLayerGuard?.ReleaseOwner(SwitchLayerOwner);
+        animationLayerGuard?.ReleaseOwner(ReloadLayerOwner);
+        animationLayerGuard?.ReleaseOwner(MeleeLayerOwner);
+        animationLayerGuard?.ReleaseOwner(ShootLayerOwner);
+        isPlayingSwitchState = false;
+        isReturningFromSwitchState = false;
+        isPlayingReloadState = false;
+        isPlayingMeleeState = false;
+        currentMeleeLayerIndex = -1;
+        shootSuppressedAimLayer = false;
+        reloadSuppressedAimLayer = false;
+        switchSuppressedAimLayer = false;
+        aimLayerWeight = 0f;
+        SetAimLayerWeight(0f);
+        SetAnimatorBool("IsAiming", false);
     }
 
     void OnDestroy()
@@ -327,6 +350,11 @@ public class PlayerWeaponAnimator : MonoBehaviour
             return 0f;
         }
 
+        if (!TryClaimActionLayer(layerIndex, SwitchLayerOwner))
+        {
+            return 0f;
+        }
+
         currentSwitchLayerName = GetLayerName(layerIndex, targetSwitchLayerName);
         switchLayerIndex = layerIndex;
         isPlayingSwitchState = true;
@@ -369,12 +397,13 @@ public class PlayerWeaponAnimator : MonoBehaviour
         float targetAimWeight = restoreSuppressedAimLayer
             ? aimLayerWeight
             : aimLayerIndex >= 0 ? animator.GetLayerWeight(aimLayerIndex) : 0f;
-        switchFadeRoutine = StartCoroutine(FadeTwoLayers(
+        switchFadeRoutine = StartCoroutine(FadeWeaponActionLayers(
             switchLayerIndex,
             0f,
             aimLayerIndex,
             targetAimWeight,
-            Mathf.Max(switchLayerFadeOut, switchReturnCrossFade)
+            Mathf.Max(switchLayerFadeOut, switchReturnCrossFade),
+            SwitchLayerOwner
         ));
     }
 
@@ -444,6 +473,11 @@ public class PlayerWeaponAnimator : MonoBehaviour
         }
 
         reloadLayerIndex = layerIndex;
+        if (!TryClaimActionLayer(reloadLayerIndex, ReloadLayerOwner))
+        {
+            return Mathf.Max(0f, fallbackDuration);
+        }
+
         reloadSuppressedAimLayer = layerIndex != aimLayerIndex;
         StopReloadFade();
         StopReloadReturn();
@@ -499,6 +533,11 @@ public class PlayerWeaponAnimator : MonoBehaviour
             return 0f;
         }
 
+        if (!TryClaimActionLayer(layerIndex, MeleeLayerOwner))
+        {
+            return 0f;
+        }
+
         if (meleeRoutine != null)
         {
             StopCoroutine(meleeRoutine);
@@ -544,6 +583,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
         FadeMeleeLayerWeight(meleeOneHandLayerIndex, 0f);
         FadeMeleeLayerWeight(meleeTwoHandLayerIndex, 0f);
         StopMeleeLayer(currentMeleeLayerIndex);
+        animationLayerGuard?.ReleaseOwner(MeleeLayerOwner);
         isPlayingMeleeState = false;
         currentMeleeLayerIndex = -1;
     }
@@ -552,6 +592,12 @@ public class PlayerWeaponAnimator : MonoBehaviour
     {
         int layerIndex = shootLayerIndex >= 0 ? shootLayerIndex : aimLayerIndex;
         if (layerIndex < 0 || !TryGetStateHash(layerIndex, GetLayerName(layerIndex, currentShootLayerName), currentShootStateName, out int stateHash))
+        {
+            shootRoutine = null;
+            yield break;
+        }
+
+        if (!TryClaimActionLayer(layerIndex, ShootLayerOwner))
         {
             shootRoutine = null;
             yield break;
@@ -590,6 +636,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
             SetAimLayerWeight(aimLayerWeight);
         }
 
+        ReleaseActionLayer(layerIndex, ShootLayerOwner);
         shootRoutine = null;
     }
 
@@ -598,6 +645,27 @@ public class PlayerWeaponAnimator : MonoBehaviour
         return currentHoldType == WeaponHoldType.OneHand
             ? keepOneHandAimLayerDuringShoot
             : keepTwoHandAimLayerDuringShoot;
+    }
+
+    bool TryClaimActionLayer(int layerIndex, string owner)
+    {
+        if (layerIndex <= 0 || layerIndex == aimLayerIndex)
+        {
+            return true;
+        }
+
+        animationLayerGuard = animationLayerGuard != null
+            ? animationLayerGuard
+            : AnimationLayerGuard.GetOrAdd(animator);
+        return animationLayerGuard == null || animationLayerGuard.TryClaim(layerIndex, owner, AnimationLayerPriority.WeaponAction);
+    }
+
+    void ReleaseActionLayer(int layerIndex, string owner)
+    {
+        if (layerIndex > 0 && layerIndex != aimLayerIndex)
+        {
+            animationLayerGuard?.Release(layerIndex, owner);
+        }
     }
 
     void ResolveAnimatorLayers()
@@ -904,6 +972,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
         }
 
         StopMeleeLayer(layerIndex);
+        ReleaseActionLayer(layerIndex, MeleeLayerOwner);
         if (currentMeleeLayerIndex == layerIndex)
         {
             currentMeleeLayerIndex = -1;
@@ -993,6 +1062,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
     {
         if (animator == null || reloadLayer < 0)
         {
+            ReleaseActionLayer(reloadLayer, ReloadLayerOwner);
             reloadReturnRoutine = null;
             yield break;
         }
@@ -1018,6 +1088,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
             }
 
             reloadReturnRoutine = null;
+            ReleaseActionLayer(reloadLayer, ReloadLayerOwner);
             yield break;
         }
 
@@ -1035,6 +1106,7 @@ public class PlayerWeaponAnimator : MonoBehaviour
             yield return FadeSingleLayer(reloadLayer, 0f, fadeDuration);
         }
 
+        ReleaseActionLayer(reloadLayer, ReloadLayerOwner);
         reloadReturnRoutine = null;
     }
 
@@ -1091,6 +1163,18 @@ public class PlayerWeaponAnimator : MonoBehaviour
     IEnumerator FadeSingleLayer(int layerIndex, float targetWeight, float duration)
     {
         yield return FadeTwoLayers(layerIndex, targetWeight, -1, 0f, duration);
+    }
+
+    IEnumerator FadeWeaponActionLayers(
+        int firstLayerIndex,
+        float firstTargetWeight,
+        int secondLayerIndex,
+        float secondTargetWeight,
+        float duration,
+        string owner)
+    {
+        yield return FadeTwoLayers(firstLayerIndex, firstTargetWeight, secondLayerIndex, secondTargetWeight, duration);
+        ReleaseActionLayer(firstLayerIndex, owner);
     }
 
     IEnumerator FadeTwoLayers(int firstLayerIndex, float firstTargetWeight, int secondLayerIndex, float secondTargetWeight, float duration)
@@ -1172,6 +1256,37 @@ public class PlayerWeaponAnimator : MonoBehaviour
         {
             StopCoroutine(shootFadeRoutine);
             shootFadeRoutine = null;
+        }
+    }
+
+    void StopAllActionCoroutinesForCleanup()
+    {
+        StopRoutine(ref shootRoutine);
+        StopRoutine(ref shootFadeRoutine);
+        StopRoutine(ref switchFadeRoutine);
+        StopRoutine(ref reloadFadeRoutine);
+        StopRoutine(ref reloadReturnRoutine);
+        StopRoutine(ref meleeRoutine);
+        StopRoutine(ref meleeOneHandFadeRoutine);
+        StopRoutine(ref meleeTwoHandFadeRoutine);
+
+        foreach (Coroutine routine in meleeFadeRoutines.Values)
+        {
+            if (routine != null)
+            {
+                StopCoroutine(routine);
+            }
+        }
+
+        meleeFadeRoutines.Clear();
+    }
+
+    void StopRoutine(ref Coroutine routine)
+    {
+        if (routine != null)
+        {
+            StopCoroutine(routine);
+            routine = null;
         }
     }
 

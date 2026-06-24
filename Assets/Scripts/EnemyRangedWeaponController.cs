@@ -60,6 +60,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
         }
     }
 
+    void OnDisable()
+    {
+        CancelAttack();
+    }
+
     public void EquipWeapon(EnemyRangedWeapon weapon)
     {
         if (weapon == null)

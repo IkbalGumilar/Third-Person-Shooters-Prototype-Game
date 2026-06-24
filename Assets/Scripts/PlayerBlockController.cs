@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class PlayerBlockController : MonoBehaviour
 {
+    private const string BlockLayerOwner = "Player.Block";
+
     public bool allowInput = true;
     public KeyCode blockKey = KeyCode.F;
     public PlayerShoot playerShoot;
@@ -49,6 +51,7 @@ public class PlayerBlockController : MonoBehaviour
     Coroutine fadeRoutine;
     Coroutine hitRoutine;
     bool hasBlockParameter;
+    AnimationLayerGuard animationLayerGuard;
     private KontrolPemain kontrolPemain;
 
     public bool IsBlocking => isBlocking;
@@ -67,6 +70,8 @@ public class PlayerBlockController : MonoBehaviour
             : weaponAnimator != null && weaponAnimator.animator != null
                 ? weaponAnimator.animator
                 : GetComponentInChildren<Animator>();
+
+        animationLayerGuard = AnimationLayerGuard.GetOrAdd(animator);
 
         ResolveBlockLayer();
         CacheAnimatorParameters();
@@ -111,9 +116,11 @@ public class PlayerBlockController : MonoBehaviour
     {
         kontrolPemain?.Pemain.Disable();
         SetBlocking(false);
+        StopBlockFade();
         StopBlockHitRoutine();
         SetBlockLayerWeight(currentBlockLayerIndex, 0f);
         SetBlockLayerWeight(activeBlockHitLayerIndex, 0f);
+        animationLayerGuard?.ReleaseOwner(BlockLayerOwner);
         currentBlockLayerIndex = -1;
         activeBlockHitLayerIndex = -1;
     }
@@ -279,6 +286,11 @@ public class PlayerBlockController : MonoBehaviour
         string stateName = GetCurrentBlockState();
         if (TryGetStateHash(stateName, out int stateHash, out int layerIndex))
         {
+            if (!TryClaimBlockLayer(layerIndex))
+            {
+                return;
+            }
+
             currentBlockLayerIndex = layerIndex;
             SetBlockLayerWeight(currentBlockLayerIndex, 1f);
             weaponAnimator?.LockLayerControl(blockFade + 0.02f);
@@ -300,6 +312,11 @@ public class PlayerBlockController : MonoBehaviour
         float hitDuration = Mathf.Max(0f, blockHitDuration);
         if (TryGetStateHash(stateName, out int stateHash, out int layerIndex))
         {
+            if (!TryClaimBlockLayer(layerIndex))
+            {
+                return;
+            }
+
             int previousLayerIndex = currentBlockLayerIndex;
             currentBlockLayerIndex = layerIndex;
             activeBlockHitLayerIndex = layerIndex;
@@ -332,6 +349,7 @@ public class PlayerBlockController : MonoBehaviour
             if (hitLayerIndex >= 0 && hitLayerIndex != currentBlockLayerIndex)
             {
                 SetBlockLayerWeight(hitLayerIndex, 0f);
+                animationLayerGuard?.Release(hitLayerIndex, BlockLayerOwner);
             }
         }
         else
@@ -340,6 +358,7 @@ public class PlayerBlockController : MonoBehaviour
             if (hitLayerIndex >= 0 && hitLayerIndex != currentBlockLayerIndex)
             {
                 SetBlockLayerWeight(hitLayerIndex, 0f);
+                animationLayerGuard?.Release(hitLayerIndex, BlockLayerOwner);
             }
         }
     }
@@ -544,6 +563,7 @@ public class PlayerBlockController : MonoBehaviour
         if (Mathf.Approximately(target, 0f) && currentBlockLayerIndex == layerIndex)
         {
             currentBlockLayerIndex = -1;
+            animationLayerGuard?.Release(layerIndex, BlockLayerOwner);
         }
     }
 
@@ -562,8 +582,24 @@ public class PlayerBlockController : MonoBehaviour
 
         if (animator != null)
         {
-            animator.SetLayerWeight(layerIndex, Mathf.Clamp01(weight));
+            if (animationLayerGuard == null || !animationLayerGuard.SetWeight(layerIndex, BlockLayerOwner, weight))
+            {
+                animator.SetLayerWeight(layerIndex, Mathf.Clamp01(weight));
+            }
         }
+    }
+
+    bool TryClaimBlockLayer(int layerIndex)
+    {
+        if (layerIndex <= 0)
+        {
+            return true;
+        }
+
+        animationLayerGuard = animationLayerGuard != null
+            ? animationLayerGuard
+            : AnimationLayerGuard.GetOrAdd(animator);
+        return animationLayerGuard == null || animationLayerGuard.TryClaim(layerIndex, BlockLayerOwner, AnimationLayerPriority.WeaponAction);
     }
 
     void StopBlockFade()

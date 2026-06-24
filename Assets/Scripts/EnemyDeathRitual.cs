@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class EnemyDeathRitual : MonoBehaviour
 {
+    private const string DeathRitualLayerOwner = "Enemy.DeathRitual";
+
     [Header("References")]
     public Enemy enemy;
     public Animator animator;
@@ -38,10 +40,16 @@ public class EnemyDeathRitual : MonoBehaviour
 
     void OnDisable()
     {
+        if (ritualRoutine != null)
+        {
+            StopCoroutine(ritualRoutine);
+        }
+
         ritualRoutine = null;
         if (animator != null)
         {
             animator.speed = 1f;
+            EnemyAnimationLayers.ReleaseOwner(animator, DeathRitualLayerOwner);
         }
     }
 
@@ -77,7 +85,7 @@ public class EnemyDeathRitual : MonoBehaviour
         int layerIndex = animator.GetLayerIndex(animationLayerName);
         if (layerIndex > 0)
         {
-            EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
+            EnemyAnimationLayers.ReleaseOwner(animator, DeathRitualLayerOwner);
         }
 
         enemy.CompleteDeathAfterRitual();
@@ -85,7 +93,18 @@ public class EnemyDeathRitual : MonoBehaviour
 
     IEnumerator DeathRitualRoutine(int layerIndex)
     {
-        EnemyAnimationLayers.SetExclusiveLayer(animator, layerIndex);
+        EnemyAnimationLayers.ReleaseLowerPriority(animator, AnimationLayerPriority.Death);
+        if (!EnemyAnimationLayers.TryClaimLayer(
+                animator,
+                layerIndex,
+                DeathRitualLayerOwner,
+                AnimationLayerPriority.Death,
+                true))
+        {
+            ritualRoutine = null;
+            yield break;
+        }
+
         animator.speed = 1f;
         PlayState(layerIndex, getupStateName, 0f);
         yield return new WaitForSeconds(GetCurrentStateDuration(layerIndex));
@@ -101,7 +120,7 @@ public class EnemyDeathRitual : MonoBehaviour
         yield return new WaitForSecondsRealtime(Mathf.Max(0f, freezeAtBoostEndDuration));
 
         animator.speed = 1f;
-        EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
+        EnemyAnimationLayers.ReleaseOwner(animator, DeathRitualLayerOwner);
         ritualRoutine = null;
         enemy.ClearDeathRitualHealth();
         enemy.CompleteDeathAfterRitual();
