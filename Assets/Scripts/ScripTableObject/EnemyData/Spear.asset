@@ -21,20 +21,32 @@ MonoBehaviour:
   knockbackResistance: 5
   canBeStunned: 1
   canBeKnockedBack: 1
-  moveSpeed: 5
+  moveSpeed: 3
   autoAddNavMeshAgent: 1
   useRandomPatrolWhenNoPoints: 1
   randomPatrolRadius: 7
   detectionRange: 12
   loseTargetRange: 16
+  shotAlertRangeMultiplier: 3
+  shotAlertShareRadius: 5
+  shotAlertMinDuration: 5
+  shotAlertMaxDuration: 60
   idleDuration: 1.5
-  patrolSpeed: 1.8
+  patrolSpeed: 1.5
   walkSpeedMultiplier: 0.6
-  chaseSpeed: 3.5
+  chaseSpeed: 3
+  patrolSpeedMultiplier: 1.35
+  crossbowPatrolSpeedMultiplier: 1.85
+  spearPatrolSpeedMultiplier: 1.85
+  maxPatrolSpeedRelativeToChase: 0.75
   stoppingDistance: 0.85
   waypointReachDistance: 0.6
+  patrolNavMeshSampleRadius: 2
+  randomPatrolSampleAttempts: 6
   faceMoveDirection: 1
   rotationSpeed: 7
+  agentDestinationUpdateInterval: 0.12
+  agentDestinationChangeThreshold: 0.15
   animationLayers:
   - layerName: 2Hand-Spear-Locomotion
     idleStateName: 2Hand-Spear Locomotion
@@ -48,7 +60,40 @@ MonoBehaviour:
     reloadStateNames: []
     specialAttackStateNames: []
     attackCrossFade: 0.08
+  useSupportBehavior: 0
+  supportAllySearchRadius: 14
+  supportBehindAllyDistance: 3
+  supportFrontlineBuffer: 1.25
+  supportFleeDistanceFromPlayer: 20
+  supportRepositionOnDamageDuration: 3
+  supportDestinationRefreshInterval: 0.35
+  stateUpdateInterval: 0.15
+  stateUpdateRandomOffset: 0.05
+  activeBehaviourUpdateInterval: 0.03
+  passiveBehaviourUpdateInterval: 0.1
+  missingPlayerLookupInterval: 0.25
   attackDamage: 10
   attackRange: 0.9
   attackCooldown: 1
+  attackWindup: 0.35
   attackHitRadius: 0.25
+  attackHeavyChance: 0
+  attackCriticalChance: 5
+  attackCriticalDamagePercent: 50
+  attackKnockbackChance: 8
+  attackKnockbackPower: 30
+  attackMaxKnockbackDistance: 0.7
+  attackKnockbackDuration: 0.15
+  hitStatusEffects: []
+  attackStatusEffectChance: 0
+  attackStatusEffects: []
+  deathEffect: {fileID: 0}
+  hitSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  growlSound: {fileID: 0}
+  angryGrowlSound: {fileID: 0}
+  growlMinInterval: 5
+  growlMaxInterval: 12
+  angryGrowlMinInterval: 3
+  angryGrowlMaxInterval: 8
+  voiceVolume: 1

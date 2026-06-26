@@ -5,6 +5,8 @@ using UnityEngine;
 public class EnemyRangedWeaponController : MonoBehaviour
 {
     const int MaxRaycastHits = 32;
+    const string AimLayerOwner = "Enemy.RangedAim";
+    const string WeaponActionLayerOwner = "Enemy.RangedAction";
 
     public EnemyRangedWeapon startingWeapon;
     public Transform weaponSocket;
@@ -25,8 +27,14 @@ public class EnemyRangedWeaponController : MonoBehaviour
     private Coroutine attackRoutine;
     private Coroutine rangeFadeRoutine;
     private int rangeLayerIndex = -1;
+    private int aimLayerIndex = -1;
     private float rangeFadeTarget = -1f;
     private EnemyStatusEffectController statusController;
+    private bool wantsAimPose;
+    private bool aimPoseActive;
+    private int activeAimStateHash;
+    private int activeAimLayerIndex = -1;
+    private bool weaponActionLayerClaimed;
     private readonly RaycastHit[] raycastHits = new RaycastHit[MaxRaycastHits];
     private readonly Dictionary<string, int> stateHashes = new Dictionary<string, int>();
 
@@ -72,9 +80,16 @@ public class EnemyRangedWeaponController : MonoBehaviour
             return;
         }
 
+        DeactivateAimPose();
+        ReleaseWeaponActionLayer();
         currentWeapon = weapon;
         currentAmmo = Mathf.Max(1, GetModifiedIntStat(StatusEffectStat.EnemyRangedMagazineSize, currentWeapon.magazineSize));
         rangeLayerIndex = -1;
+        aimLayerIndex = -1;
+        activeAimStateHash = 0;
+        activeAimLayerIndex = -1;
+        wantsAimPose = false;
+        aimPoseActive = false;
 
         GameObject weaponObject = ResolveWeaponObject(weapon);
         if (weaponObject != null)
@@ -98,10 +113,10 @@ public class EnemyRangedWeaponController : MonoBehaviour
             return false;
         }
 
-        if (ShouldUseCrossbowMelee(distanceSqr))
+        if (ShouldUseRangedBossMelee(distanceSqr))
         {
             nextAttackTime = Time.time + Mathf.Max(0.01f, GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeCooldown, currentWeapon.crossbowMeleeCooldown));
-            attackRoutine = StartCoroutine(CrossbowMeleeRoutine(target));
+            attackRoutine = StartCoroutine(RangedBossMeleeRoutine(target));
             return true;
         }
 
@@ -123,6 +138,22 @@ public class EnemyRangedWeaponController : MonoBehaviour
         return true;
     }
 
+    public bool CanHoldAttackPosition(Transform target)
+    {
+        if (currentWeapon == null || target == null || !CanUseCurrentWeapon())
+        {
+            return false;
+        }
+
+        float attackRange = GetModifiedStat(StatusEffectStat.EnemyRangedAttackRange, currentWeapon.attackRange);
+        if ((transform.position - target.position).sqrMagnitude > attackRange * attackRange)
+        {
+            return false;
+        }
+
+        return HasLineOfSight(target);
+    }
+
     public void CancelAttack()
     {
         if (attackRoutine != null)
@@ -132,7 +163,33 @@ public class EnemyRangedWeaponController : MonoBehaviour
             enemyAI?.SetLocomotionSuppressed(false);
         }
 
+        ReleaseWeaponActionLayer();
+        SetAimTargetVisible(null, false);
         FadeRangeLayerWeight(0f);
+    }
+
+    public void SetAimTargetVisible(Transform target, bool visible)
+    {
+        bool shouldAim = visible
+            && target != null
+            && currentWeapon != null
+            && CanUseCurrentWeapon()
+            && HasLineOfSight(target);
+
+        wantsAimPose = shouldAim;
+        if (IsAttacking)
+        {
+            return;
+        }
+
+        if (shouldAim)
+        {
+            ActivateAimPose();
+        }
+        else
+        {
+            DeactivateAimPose();
+        }
     }
 
     // A hit reaction uses the same full-body weapon layer as this attack.
@@ -147,6 +204,8 @@ public class EnemyRangedWeaponController : MonoBehaviour
         }
 
         StopRangeFade();
+        DeactivateAimPose();
+        ReleaseWeaponActionLayer();
         SetRangeLayerWeight(0f);
         if (wasAttacking)
         {
@@ -168,9 +227,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
         // 1Hand-Pistol currently defaults to an attack state. Do not expose
         // that layer while the enemy is merely locking its aim; activate it
         // only in the same frame as the selected firing animation.
-        enemyAI?.SetLocomotionSuppressed(true);
-        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
-        SetRangeLayerWeight(1f);
+        BeginWeaponAction();
         PlayRandomShootAnimation();
         PlaySound(currentWeapon.shootSound);
         yield return null;
@@ -194,17 +251,14 @@ public class EnemyRangedWeaponController : MonoBehaviour
             yield return new WaitForSeconds(remaining);
         }
 
-        FadeRangeLayerWeight(0f);
-        enemyAI?.SetLocomotionSuppressed(false);
+        EndWeaponAction();
         attackRoutine = null;
     }
 
     IEnumerator ReloadRoutine()
     {
         StopRangeFade();
-        enemyAI?.SetLocomotionSuppressed(true);
-        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
-        SetRangeLayerWeight(1f);
+        BeginWeaponAction();
         PlayReloadAnimation();
         PlaySound(currentWeapon.reloadSound);
         yield return null;
@@ -215,18 +269,15 @@ public class EnemyRangedWeaponController : MonoBehaviour
         yield return new WaitForSeconds(reloadDuration);
 
         currentAmmo = Mathf.Max(1, GetModifiedIntStat(StatusEffectStat.EnemyRangedMagazineSize, currentWeapon.magazineSize));
-        FadeRangeLayerWeight(0f);
-        enemyAI?.SetLocomotionSuppressed(false);
+        EndWeaponAction();
         attackRoutine = null;
     }
 
-    IEnumerator CrossbowMeleeRoutine(Transform target)
+    IEnumerator RangedBossMeleeRoutine(Transform target)
     {
         StopRangeFade();
-        enemyAI?.SetLocomotionSuppressed(true);
-        EnemyAnimationLayers.SetExclusiveLayer(animator, GetRangeLayerIndex());
-        SetRangeLayerWeight(1f);
-        PlayRandomCrossbowMeleeAnimation();
+        BeginWeaponAction();
+        PlayRandomRangedBossMeleeAnimation();
         yield return null;
         float animationDuration = GetCurrentAnimationDuration(currentWeapon.crossbowMeleeCooldown);
 
@@ -236,7 +287,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
             yield return new WaitForSeconds(delay);
         }
 
-        DealCrossbowMeleeDamage(target);
+        DealRangedBossMeleeDamage(target);
 
         float remaining = Mathf.Max(
             0f,
@@ -250,8 +301,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
             yield return new WaitForSeconds(remaining);
         }
 
-        FadeRangeLayerWeight(0f);
-        enemyAI?.SetLocomotionSuppressed(false);
+        EndWeaponAction();
         attackRoutine = null;
     }
 
@@ -271,11 +321,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
         return Mathf.Max(0.01f, duration, fallbackDuration);
     }
 
-    bool ShouldUseCrossbowMelee(float distanceSqr)
+    bool ShouldUseRangedBossMelee(float distanceSqr)
     {
         float meleeRange = GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeRange, currentWeapon.crossbowMeleeRange);
         return currentWeapon != null
-            && currentWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow
+            && (currentWeapon.weaponKind == EnemyRangedWeaponKind.Crossbow || currentWeapon.weaponKind == EnemyRangedWeaponKind.Shotgun)
             && currentWeapon.bossCanUseCrossbowMelee
             && GetEnemyType() == EnemyType.Boss
             && distanceSqr <= meleeRange * meleeRange;
@@ -318,17 +368,34 @@ public class EnemyRangedWeaponController : MonoBehaviour
         float attackRange = GetModifiedStat(StatusEffectStat.EnemyRangedAttackRange, currentWeapon.attackRange);
         float spreadAngle = GetModifiedStat(StatusEffectStat.EnemyRangedSpreadAngle, currentWeapon.spreadAngle);
         float damagePerPellet = GetModifiedStat(StatusEffectStat.EnemyRangedDamage, currentWeapon.damage) / pelletCount;
+        float spreadRotation = Random.Range(0f, Mathf.PI * 2f);
+        bool isKnockback = TryGetKnockbackDistance(
+            currentWeapon.knockbackChance,
+            currentWeapon.knockbackPower,
+            currentWeapon.maxKnockbackDistance,
+            out float knockbackDistance);
+        float knockbackPerPellet = isKnockback ? knockbackDistance / pelletCount : 0f;
+        float accumulatedKnockbackDistance = 0f;
+        PlayerHealth knockbackTarget = null;
+        Vector3 knockbackDirection = Vector3.zero;
 
         for (int i = 0; i < pelletCount; i++)
         {
-            Vector3 direction = ApplySpread(baseDirection, spreadAngle);
+            Vector3 direction = GetSpreadDirection(baseDirection, i, pelletCount, spreadAngle, spreadRotation);
 
             if (TryRaycastIgnoringSelf(origin, direction, attackRange, out RaycastHit hit))
             {
                 PlayerHealth hitHealth = hit.collider.GetComponentInParent<PlayerHealth>();
                 if (hitHealth != null)
                 {
-                    hitHealth.TakeDamage(damagePerPellet, hit.point, hit.normal);
+                    ApplyRangedHitDamage(hitHealth, damagePerPellet, hit.point, hit.normal, isKnockback);
+                    if (isKnockback && !hitHealth.LastDamageWasBlocked && !hitHealth.IsDead)
+                    {
+                        accumulatedKnockbackDistance += knockbackPerPellet;
+                        knockbackTarget = hitHealth;
+                        knockbackDirection = GetKnockbackDirection(hitHealth.transform);
+                    }
+
                     TryApplyStatusEffects(hitHealth, currentWeapon.statusEffects, currentWeapon.statusEffectChance);
                     PlaySound(currentWeapon.hitSound);
                 }
@@ -339,12 +406,92 @@ public class EnemyRangedWeaponController : MonoBehaviour
                 if (targetHealth != null && (transform.position - target.position).sqrMagnitude <= attackRange * attackRange)
                 {
                     Vector3 normal = (target.position - transform.position).normalized;
-                    targetHealth.TakeDamage(damagePerPellet, target.position, -normal);
+                    ApplyRangedHitDamage(targetHealth, damagePerPellet, target.position, -normal, isKnockback);
+                    if (isKnockback && !targetHealth.LastDamageWasBlocked && !targetHealth.IsDead)
+                    {
+                        accumulatedKnockbackDistance += knockbackPerPellet;
+                        knockbackTarget = targetHealth;
+                        knockbackDirection = normal;
+                    }
+
                     TryApplyStatusEffects(targetHealth, currentWeapon.statusEffects, currentWeapon.statusEffectChance);
                     PlaySound(currentWeapon.hitSound);
                 }
             }
         }
+
+        if (knockbackTarget != null && !knockbackTarget.IsDead && accumulatedKnockbackDistance > 0f)
+        {
+            float finalKnockbackDistance = Mathf.Min(accumulatedKnockbackDistance, knockbackDistance);
+            ApplyKnockback(knockbackTarget, knockbackDirection, finalKnockbackDistance, currentWeapon.knockbackDuration);
+        }
+    }
+
+    void ApplyRangedHitDamage(PlayerHealth playerHealth, float damage, Vector3 hitPoint, Vector3 hitNormal, bool isKnockback)
+    {
+        if (playerHealth == null)
+        {
+            return;
+        }
+
+        playerHealth.TakeDamage(damage, hitPoint, hitNormal, false, false, isKnockback);
+    }
+
+    bool TryGetKnockbackDistance(float chance, float power, float maxDistance, out float distance)
+    {
+        distance = 0f;
+        if (!RollPercent(chance))
+        {
+            return false;
+        }
+
+        distance = Mathf.Clamp(power / 100f * maxDistance, 0f, maxDistance);
+        return distance > 0f;
+    }
+
+    Vector3 GetKnockbackDirection(Transform playerTransform)
+    {
+        Vector3 direction = playerTransform != null
+            ? playerTransform.position - transform.position
+            : transform.forward;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.001f)
+        {
+            direction = transform.forward;
+        }
+
+        return direction.normalized;
+    }
+
+    void ApplyKnockback(PlayerHealth playerHealth, Vector3 direction, float distance, float duration)
+    {
+        if (playerHealth == null || distance <= 0f)
+        {
+            return;
+        }
+
+        PlayerMovement movement = playerHealth.GetComponent<PlayerMovement>();
+        if (movement == null)
+        {
+            movement = playerHealth.GetComponentInParent<PlayerMovement>();
+        }
+
+        movement?.ApplyKnockback(direction, distance, duration);
+    }
+
+    bool RollPercent(float chance)
+    {
+        if (chance <= 0f)
+        {
+            return false;
+        }
+
+        if (chance >= 100f)
+        {
+            return true;
+        }
+
+        return Random.Range(0f, 100f) <= chance;
     }
 
     bool ShouldUseDirectHitFallback(Transform target, Vector3 lockedTargetPosition)
@@ -391,7 +538,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
         return Random.Range(minDelay, maxDelay);
     }
 
-    void DealCrossbowMeleeDamage(Transform target)
+    void DealRangedBossMeleeDamage(Transform target)
     {
         if (currentWeapon == null || target == null)
         {
@@ -419,7 +566,20 @@ public class EnemyRangedWeaponController : MonoBehaviour
 
         hitNormal.Normalize();
         Vector3 hitPoint = playerHealth.transform.position - hitNormal * 0.25f;
-        playerHealth.TakeDamage(GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeDamage, currentWeapon.crossbowMeleeDamage), hitPoint, hitNormal);
+        float knockbackDistance = Mathf.Max(0f, currentWeapon.rangedMeleeKnockbackDistance);
+        bool isKnockback = knockbackDistance > 0f;
+        playerHealth.TakeDamage(
+            GetModifiedStat(StatusEffectStat.EnemyRangedCrossbowMeleeDamage, currentWeapon.crossbowMeleeDamage),
+            hitPoint,
+            hitNormal,
+            false,
+            false,
+            isKnockback);
+        if (isKnockback && !playerHealth.LastDamageWasBlocked && !playerHealth.IsDead)
+        {
+            ApplyKnockback(playerHealth, hitNormal, knockbackDistance, currentWeapon.rangedMeleeKnockbackDuration);
+        }
+
         TryApplyStatusEffects(playerHealth, currentWeapon.crossbowMeleeStatusEffects, currentWeapon.crossbowMeleeStatusEffectChance);
         PlaySound(currentWeapon.hitSound);
     }
@@ -508,20 +668,41 @@ public class EnemyRangedWeaponController : MonoBehaviour
         return statusController != null ? statusController.ModifyIntStat(stat, baseValue) : Mathf.Max(1, baseValue);
     }
 
-    Vector3 ApplySpread(Vector3 direction, float spreadAngle)
+    Vector3 GetSpreadDirection(Vector3 baseDirection, int pelletIndex, int pelletCount, float spreadAngle, float spreadRotation)
     {
-        if (spreadAngle <= 0f)
+        if (spreadAngle <= 0f || pelletCount <= 1)
         {
-            return direction;
+            return baseDirection;
         }
 
-        Quaternion spread = Quaternion.Euler(
-            Random.Range(-spreadAngle, spreadAngle),
-            Random.Range(-spreadAngle, spreadAngle),
-            0f
-        );
+        Vector3 forward = baseDirection.sqrMagnitude > 0.0001f ? baseDirection.normalized : transform.forward;
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
+        if (right.sqrMagnitude <= 0.0001f)
+        {
+            right = transform.right;
+        }
 
-        return spread * direction;
+        right.Normalize();
+        Vector3 up = Vector3.Cross(forward, right).normalized;
+        float spreadRadius = Mathf.Tan(spreadAngle * Mathf.Deg2Rad);
+        Vector2 circularOffset = GetCircularSpreadOffset(pelletIndex, pelletCount, spreadRotation) * spreadRadius;
+        Vector3 direction = forward
+            + right * circularOffset.x
+            + up * circularOffset.y;
+
+        return direction.normalized;
+    }
+
+    Vector2 GetCircularSpreadOffset(int pelletIndex, int pelletCount, float spreadRotation)
+    {
+        if (pelletIndex <= 0)
+        {
+            return Vector2.zero;
+        }
+
+        int outerPelletCount = Mathf.Max(1, pelletCount - 1);
+        float angle = spreadRotation + (pelletIndex - 1) * Mathf.PI * 2f / outerPelletCount;
+        return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
     }
 
     bool TryRaycastIgnoringSelf(Vector3 origin, Vector3 direction, float distance, out RaycastHit closestHit)
@@ -639,17 +820,24 @@ public class EnemyRangedWeaponController : MonoBehaviour
         PlayState(currentWeapon.handgunReloadStateName);
     }
 
-    void PlayRandomCrossbowMeleeAnimation()
+    void PlayRandomRangedBossMeleeAnimation()
     {
         if (TryPlayEnemyDataRangedStates(RangedAnimationSlot.SpecialAttack))
         {
             return;
         }
 
-        if (currentWeapon != null)
+        if (currentWeapon == null)
         {
-            PlayRandomState(currentWeapon.crossbowMeleeStateNames);
+            return;
         }
+
+        if (currentWeapon.weaponKind == EnemyRangedWeaponKind.Shotgun && TryPlayRandomState(currentWeapon.shotgunMeleeStateNames))
+        {
+            return;
+        }
+
+        PlayRandomState(currentWeapon.crossbowMeleeStateNames);
     }
 
     enum RangedAnimationSlot
@@ -689,8 +877,7 @@ public class EnemyRangedWeaponController : MonoBehaviour
                 continue;
             }
 
-            PlayRandomState(stateNames);
-            return true;
+            return TryPlayRandomState(stateNames);
         }
 
         return false;
@@ -735,9 +922,14 @@ public class EnemyRangedWeaponController : MonoBehaviour
 
     void PlayRandomState(string[] stateNames)
     {
+        TryPlayRandomState(stateNames);
+    }
+
+    bool TryPlayRandomState(string[] stateNames)
+    {
         if (stateNames == null || stateNames.Length == 0)
         {
-            return;
+            return false;
         }
 
         int startIndex = Random.Range(0, stateNames.Length);
@@ -746,9 +938,11 @@ public class EnemyRangedWeaponController : MonoBehaviour
             string stateName = stateNames[(startIndex + i) % stateNames.Length];
             if (PlayState(stateName))
             {
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
     bool PlayState(string stateName)
@@ -768,9 +962,109 @@ public class EnemyRangedWeaponController : MonoBehaviour
         return true;
     }
 
+    void BeginWeaponAction()
+    {
+        DeactivateAimPose();
+        enemyAI?.SetLocomotionSuppressed(true);
+
+        int layerIndex = GetRangeLayerIndex();
+        weaponActionLayerClaimed = EnemyAnimationLayers.TryClaimLayer(
+            animator,
+            layerIndex,
+            WeaponActionLayerOwner,
+            AnimationLayerPriority.WeaponAction);
+
+        SetRangeLayerWeight(1f);
+    }
+
+    void EndWeaponAction()
+    {
+        ReleaseWeaponActionLayer();
+        enemyAI?.SetLocomotionSuppressed(false);
+
+        if (wantsAimPose)
+        {
+            ActivateAimPose();
+        }
+        else
+        {
+            FadeRangeLayerWeight(0f);
+        }
+    }
+
+    void ReleaseWeaponActionLayer()
+    {
+        if (!weaponActionLayerClaimed)
+        {
+            return;
+        }
+
+        EnemyAnimationLayers.ReleaseLayer(animator, GetRangeLayerIndex(), WeaponActionLayerOwner);
+        weaponActionLayerClaimed = false;
+    }
+
+    void ActivateAimPose()
+    {
+        if (animator == null || currentWeapon == null)
+        {
+            return;
+        }
+
+        int layerIndex = GetAimLayerIndex();
+        if (layerIndex <= 0)
+        {
+            return;
+        }
+
+        string stateName = GetAimStateName();
+        int stateHash = GetStateHash(layerIndex, GetAimLayerName(), stateName);
+        if (stateHash == 0)
+        {
+            return;
+        }
+
+        if (!EnemyAnimationLayers.TryClaimLayer(animator, layerIndex, AimLayerOwner, AnimationLayerPriority.Aim))
+        {
+            return;
+        }
+
+        StopRangeFade();
+        if (!aimPoseActive || activeAimLayerIndex != layerIndex || activeAimStateHash != stateHash)
+        {
+            animator.CrossFadeInFixedTime(
+                stateHash,
+                Mathf.Max(0f, GetModifiedStat(StatusEffectStat.EnemyRangedAnimationCrossFade, currentWeapon.animationCrossFade)),
+                layerIndex);
+        }
+
+        animator.SetLayerWeight(layerIndex, 1f);
+        activeAimLayerIndex = layerIndex;
+        activeAimStateHash = stateHash;
+        aimPoseActive = true;
+    }
+
+    void DeactivateAimPose()
+    {
+        if (!aimPoseActive && activeAimLayerIndex < 0)
+        {
+            return;
+        }
+
+        int layerIndex = activeAimLayerIndex >= 0 ? activeAimLayerIndex : GetAimLayerIndex();
+        EnemyAnimationLayers.ReleaseLayer(animator, layerIndex, AimLayerOwner);
+        activeAimLayerIndex = -1;
+        activeAimStateHash = 0;
+        aimPoseActive = false;
+    }
+
     int GetStateHash(string stateName)
     {
         int layerIndex = GetRangeLayerIndex();
+        return GetStateHash(layerIndex, GetRangeLayerName(), stateName);
+    }
+
+    int GetStateHash(int layerIndex, string layerName, string stateName)
+    {
         if (!stateHashes.TryGetValue(stateName, out int shortHash))
         {
             shortHash = Animator.StringToHash(stateName);
@@ -782,7 +1076,6 @@ public class EnemyRangedWeaponController : MonoBehaviour
             return shortHash;
         }
 
-        string layerName = GetRangeLayerName();
         string fullPath = $"{layerName}.{stateName}";
         if (!stateHashes.TryGetValue(fullPath, out int fullPathHash))
         {
@@ -796,6 +1089,50 @@ public class EnemyRangedWeaponController : MonoBehaviour
         }
 
         return 0;
+    }
+
+    int GetAimLayerIndex()
+    {
+        if (aimLayerIndex < 0)
+        {
+            aimLayerIndex = animator != null ? animator.GetLayerIndex(GetAimLayerName()) : -1;
+        }
+
+        return aimLayerIndex >= 0 ? aimLayerIndex : 0;
+    }
+
+    string GetAimLayerName()
+    {
+        if (currentWeapon == null)
+        {
+            return GetRangeLayerName();
+        }
+
+        return currentWeapon.weaponKind switch
+        {
+            EnemyRangedWeaponKind.Handgun => "Armed",
+            EnemyRangedWeaponKind.DualPistol => "Armed",
+            EnemyRangedWeaponKind.Crossbow => "2Hand-Crossbow",
+            EnemyRangedWeaponKind.Shotgun => "2Hand-Shooting",
+            _ => GetRangeLayerName()
+        };
+    }
+
+    string GetAimStateName()
+    {
+        if (currentWeapon == null)
+        {
+            return string.Empty;
+        }
+
+        return currentWeapon.weaponKind switch
+        {
+            EnemyRangedWeaponKind.Handgun => "Armed-Idle-Pistol-R-Static",
+            EnemyRangedWeaponKind.DualPistol => "Armed-Idle-Pistol-Dual-Static",
+            EnemyRangedWeaponKind.Crossbow => "2Hand-Crossbow-Aiming-CM",
+            EnemyRangedWeaponKind.Shotgun => "Shooting-Aiming-CM",
+            _ => string.Empty
+        };
     }
 
     int GetRangeLayerIndex()

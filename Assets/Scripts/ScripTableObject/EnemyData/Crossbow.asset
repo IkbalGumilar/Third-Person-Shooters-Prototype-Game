@@ -21,7 +21,7 @@ MonoBehaviour:
   knockbackResistance: 5
   canBeStunned: 1
   canBeKnockedBack: 1
-  moveSpeed: 5
+  moveSpeed: 3
   autoAddNavMeshAgent: 1
   useRandomPatrolWhenNoPoints: 1
   randomPatrolRadius: 7
@@ -32,9 +32,9 @@ MonoBehaviour:
   shotAlertMinDuration: 5
   shotAlertMaxDuration: 60
   idleDuration: 1.5
-  patrolSpeed: 1.8
+  patrolSpeed: 1.5
   walkSpeedMultiplier: 0.6
-  chaseSpeed: 3.5
+  chaseSpeed: 3
   patrolSpeedMultiplier: 1.35
   crossbowPatrolSpeedMultiplier: 1.85
   spearPatrolSpeedMultiplier: 1.85

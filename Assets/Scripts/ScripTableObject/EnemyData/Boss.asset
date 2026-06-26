@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f62ae4ee047432f95bec281f97951f5, type: 3}
   m_Name: Boss
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: Kolosal
+  enemyName: The Lizard man
   enemyType: 7
-  maxHealth: 200
+  maxHealth: 1250
   penetrationResistance: 90
   criticalResistance: 50
   stunResistance: 80
-  knockbackResistance: 90
+  knockbackResistance: 80
   canBeStunned: 1
   canBeKnockedBack: 1
-  moveSpeed: 2
+  moveSpeed: 3
   autoAddNavMeshAgent: 1
   useRandomPatrolWhenNoPoints: 1
   randomPatrolRadius: 5
@@ -32,23 +32,56 @@ MonoBehaviour:
   shotAlertMinDuration: 5
   shotAlertMaxDuration: 60
   idleDuration: 2.5
-  patrolSpeed: 1.6
-  chaseSpeed: 3
+  patrolSpeed: 2
+  walkSpeedMultiplier: 0.6
+  chaseSpeed: 4
+  patrolSpeedMultiplier: 1.35
+  crossbowPatrolSpeedMultiplier: 1.85
+  spearPatrolSpeedMultiplier: 1.85
+  maxPatrolSpeedRelativeToChase: 0.75
   stoppingDistance: 1.1
   waypointReachDistance: 0.8
+  patrolNavMeshSampleRadius: 2
+  randomPatrolSampleAttempts: 6
   faceMoveDirection: 1
   rotationSpeed: 6
-  attackDamage: 10
+  agentDestinationUpdateInterval: 0.12
+  agentDestinationChangeThreshold: 0.15
+  animationLayers: []
+  useSupportBehavior: 0
+  supportAllySearchRadius: 14
+  supportBehindAllyDistance: 3
+  supportFrontlineBuffer: 1.25
+  supportFleeDistanceFromPlayer: 20
+  supportRepositionOnDamageDuration: 3
+  supportDestinationRefreshInterval: 0.35
+  stateUpdateInterval: 0.15
+  stateUpdateRandomOffset: 0.05
+  activeBehaviourUpdateInterval: 0.03
+  passiveBehaviourUpdateInterval: 0.1
+  missingPlayerLookupInterval: 0.25
+  attackDamage: 15
   attackRange: 1.15
   attackCooldown: 1
   attackWindup: 0.35
   attackHitRadius: 0.3
+  attackHeavyChance: 0
   attackCriticalChance: 18
   attackCriticalDamagePercent: 100
   attackKnockbackChance: 45
   attackKnockbackPower: 100
   attackMaxKnockbackDistance: 2
   attackKnockbackDuration: 0.35
+  hitStatusEffects: []
+  attackStatusEffectChance: 0
+  attackStatusEffects: []
   deathEffect: {fileID: 0}
   hitSound: {fileID: 8300000, guid: 42dd24bc5ae9e7d41ad0803f3b6b9e33, type: 3}
   deathSound: {fileID: 8300000, guid: 5c043e6751514bb409878434bad218ff, type: 3}
+  growlSound: {fileID: 0}
+  angryGrowlSound: {fileID: 0}
+  growlMinInterval: 5
+  growlMaxInterval: 12
+  angryGrowlMinInterval: 3
+  angryGrowlMaxInterval: 8
+  voiceVolume: 1

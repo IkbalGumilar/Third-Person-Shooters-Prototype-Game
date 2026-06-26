@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public sealed class InGameOptionsMenu : MonoBehaviour
 {
     private static InGameOptionsMenu instance;
+    private static bool inputBlocked;
 
     private const string MainSceneName = "MainScene";
     private const string MainMenuSceneName = "MainMenu";
@@ -34,8 +35,13 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private const float MainMenuBlurDuration = 3f;
     private const float MainMenuBlurRampDuration = 0.2f;
     private const float MainMenuDarkenDuration = 2f;
+    private const float OptionsHiddenOffsetY = -1200f;
+    private const float OptionsClosedChildScale = 0.2f;
+    private const float OptionsOpenDuration = 0.28f;
+    private const float OptionsCloseDuration = 0.22f;
 
     private GameObject optionPanel;
+    private RectTransform optionPanelRect;
     private TMP_Dropdown resolutionDropdown;
     private TMP_Dropdown qualityDropdown;
     private TMP_Dropdown shadowDropdown;
@@ -60,9 +66,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private PostProcessingSettings sharedPostProcessingSettings;
     private Color applyDefaultColor;
     private readonly List<Resolution> resolutions = new();
+    private readonly Dictionary<RectTransform, Vector3> optionChildOpenScales = new();
+    private Vector2 optionPanelOpenPosition;
+    private Coroutine optionAnimationRoutine;
     private bool suppressChangeDetection;
     private bool hasPendingChanges;
     private bool isLoadingMainMenu;
+    private bool optionAnimationStateCached;
+    private bool optionsOpen;
     private PlayerHealth playerHealth;
     private PlayerMovement playerMovement;
     private PlayerShoot playerShoot;
@@ -81,6 +92,21 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private bool previousCursorEnabled;
     private bool previousCursorVisible;
     private CursorLockMode previousCursorLockState;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeInputBlock()
+    {
+        inputBlocked = false;
+    }
+
+    public static void SetInputBlocked(bool blocked)
+    {
+        inputBlocked = blocked;
+        if (blocked && instance != null)
+        {
+            instance.CloseForExternalInputBlock();
+        }
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateRuntimeController()
@@ -117,6 +143,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void Update()
     {
+        if (inputBlocked)
+        {
+            CloseForExternalInputBlock();
+            return;
+        }
+
         if (playerHealth != null && playerHealth.IsDead)
         {
             CloseForPlayerDeath();
@@ -125,6 +157,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         if (optionPanel == null
             || isLoadingMainMenu
+            || optionAnimationRoutine != null
             || Keyboard.current == null
             || !Keyboard.current.escapeKey.wasPressedThisFrame
             || InventoryGridUI.IsAnyInventoryOpen
@@ -137,7 +170,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             HideConfirmation();
         }
-        else if (optionPanel.activeSelf)
+        else if (optionsOpen)
         {
             ResumeGame();
         }
@@ -157,7 +190,17 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         UnsubscribePlayerHealth();
         SetControlsFrozen(false);
         optionPanel = null;
+        optionPanelRect = null;
         confirmationPanel = null;
+        optionAnimationStateCached = false;
+        optionsOpen = false;
+        optionChildOpenScales.Clear();
+        if (optionAnimationRoutine != null)
+        {
+            StopCoroutine(optionAnimationRoutine);
+            optionAnimationRoutine = null;
+        }
+
         if (SceneManager.GetActiveScene().name != MainSceneName)
         {
             return;
@@ -177,7 +220,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         AttachSharedSettingsControllers();
         RegisterListeners();
         CreateConfirmationDialog();
-        optionPanel.SetActive(false);
+        CacheOptionAnimationState();
+        SetOptionPanelImmediate(false);
     }
 
     private void BindControls()
@@ -307,7 +351,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         LoadAppliedValues();
         suppressChangeDetection = false;
         SetPendingChanges(false);
-        optionPanel.SetActive(true);
+        optionsOpen = true;
+        PlayOptionOpenAnimation();
     }
 
     public void ResumeGame()
@@ -323,8 +368,217 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             return;
         }
 
-        optionPanel.SetActive(false);
-        SetControlsFrozen(false);
+        HideConfirmation();
+        optionsOpen = false;
+        PlayOptionCloseAnimation(true);
+    }
+
+    private void PlayOptionOpenAnimation()
+    {
+        if (optionPanel == null)
+        {
+            return;
+        }
+
+        CacheOptionAnimationState();
+        if (optionAnimationRoutine != null)
+        {
+            StopCoroutine(optionAnimationRoutine);
+            optionAnimationRoutine = null;
+        }
+
+        optionPanel.SetActive(true);
+        SetOptionPanelClosedPose();
+        optionAnimationRoutine = StartCoroutine(AnimateOptionPanel(true, false));
+    }
+
+    private void PlayOptionCloseAnimation(bool unfreezeControlsWhenDone)
+    {
+        if (optionPanel == null)
+        {
+            if (unfreezeControlsWhenDone)
+            {
+                SetControlsFrozen(false);
+            }
+
+            return;
+        }
+
+        CacheOptionAnimationState();
+        if (optionAnimationRoutine != null)
+        {
+            StopCoroutine(optionAnimationRoutine);
+            optionAnimationRoutine = null;
+        }
+
+        if (!optionPanel.activeSelf)
+        {
+            SetOptionPanelImmediate(false);
+            if (unfreezeControlsWhenDone)
+            {
+                SetControlsFrozen(false);
+            }
+
+            return;
+        }
+
+        optionAnimationRoutine = StartCoroutine(AnimateOptionPanel(false, unfreezeControlsWhenDone));
+    }
+
+    private IEnumerator AnimateOptionPanel(bool opening, bool unfreezeControlsWhenDone)
+    {
+        float duration = Mathf.Max(0.01f, opening ? OptionsOpenDuration : OptionsCloseDuration);
+        float elapsed = 0f;
+        Vector2 fromPosition = optionPanelRect != null ? optionPanelRect.anchoredPosition : Vector2.zero;
+        Vector2 toPosition = opening
+            ? optionPanelOpenPosition
+            : optionPanelOpenPosition + new Vector2(0f, OptionsHiddenOffsetY);
+
+        Dictionary<RectTransform, Vector3> fromScales = new();
+        Dictionary<RectTransform, Vector3> toScales = new();
+        foreach (KeyValuePair<RectTransform, Vector3> pair in optionChildOpenScales)
+        {
+            if (pair.Key == null)
+            {
+                continue;
+            }
+
+            fromScales[pair.Key] = pair.Key.localScale;
+            toScales[pair.Key] = opening ? pair.Value : pair.Value * OptionsClosedChildScale;
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = opening ? EaseOutCubic(t) : EaseInCubic(t);
+
+            if (optionPanelRect != null)
+            {
+                optionPanelRect.anchoredPosition = Vector2.LerpUnclamped(fromPosition, toPosition, eased);
+            }
+
+            foreach (KeyValuePair<RectTransform, Vector3> pair in toScales)
+            {
+                if (pair.Key != null && fromScales.TryGetValue(pair.Key, out Vector3 startScale))
+                {
+                    pair.Key.localScale = Vector3.LerpUnclamped(startScale, pair.Value, eased);
+                }
+            }
+
+            yield return null;
+        }
+
+        if (opening)
+        {
+            SetOptionPanelOpenPose();
+        }
+        else
+        {
+            SetOptionPanelClosedPose();
+            optionPanel.SetActive(false);
+        }
+
+        optionAnimationRoutine = null;
+        if (unfreezeControlsWhenDone)
+        {
+            SetControlsFrozen(false);
+        }
+    }
+
+    private void CacheOptionAnimationState()
+    {
+        if (optionPanel == null)
+        {
+            return;
+        }
+
+        optionPanelRect = optionPanel.GetComponent<RectTransform>();
+        if (optionPanelRect != null && !optionAnimationStateCached)
+        {
+            optionPanelOpenPosition = Vector2.zero;
+        }
+
+        if (!optionAnimationStateCached)
+        {
+            optionChildOpenScales.Clear();
+            for (int i = 0; i < optionPanel.transform.childCount; i++)
+            {
+                RectTransform child = optionPanel.transform.GetChild(i) as RectTransform;
+                if (child != null)
+                {
+                    optionChildOpenScales[child] = Vector3.one;
+                }
+            }
+
+            optionAnimationStateCached = true;
+        }
+    }
+
+    private void SetOptionPanelImmediate(bool open)
+    {
+        if (optionAnimationRoutine != null)
+        {
+            StopCoroutine(optionAnimationRoutine);
+            optionAnimationRoutine = null;
+        }
+
+        CacheOptionAnimationState();
+        optionsOpen = open;
+        if (open)
+        {
+            optionPanel?.SetActive(true);
+            SetOptionPanelOpenPose();
+        }
+        else
+        {
+            SetOptionPanelClosedPose();
+            optionPanel?.SetActive(false);
+        }
+    }
+
+    private void SetOptionPanelOpenPose()
+    {
+        if (optionPanelRect != null)
+        {
+            optionPanelRect.anchoredPosition = optionPanelOpenPosition;
+        }
+
+        foreach (KeyValuePair<RectTransform, Vector3> pair in optionChildOpenScales)
+        {
+            if (pair.Key != null)
+            {
+                pair.Key.localScale = pair.Value;
+            }
+        }
+    }
+
+    private void SetOptionPanelClosedPose()
+    {
+        if (optionPanelRect != null)
+        {
+            optionPanelRect.anchoredPosition = optionPanelOpenPosition + new Vector2(0f, OptionsHiddenOffsetY);
+        }
+
+        foreach (KeyValuePair<RectTransform, Vector3> pair in optionChildOpenScales)
+        {
+            if (pair.Key != null)
+            {
+                pair.Key.localScale = pair.Value * OptionsClosedChildScale;
+            }
+        }
+    }
+
+    private static float EaseOutCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - Mathf.Pow(1f - t, 3f);
+    }
+
+    private static float EaseInCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * t;
     }
 
     public void ApplySettings()
@@ -450,7 +704,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         if (optionPanel != null)
         {
-            optionPanel.SetActive(false);
+            SetOptionPanelImmediate(false);
         }
 
         CreateMainMenuBlurOverlay();
@@ -553,7 +807,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void HandlePlayerDamaged()
     {
-        if (optionPanel != null && optionPanel.activeSelf)
+        if (optionPanel != null && optionsOpen)
         {
             ResumeGame();
         }
@@ -568,7 +822,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     {
         if (optionPanel != null)
         {
-            optionPanel.SetActive(false);
+            SetOptionPanelImmediate(false);
         }
 
         if (confirmationPanel != null)
@@ -579,6 +833,24 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         // PlayerHealth has disabled gameplay input. Do not restore the
         // previous options-menu state while the death sequence is active.
         controlsFrozen = false;
+    }
+
+    private void CloseForExternalInputBlock()
+    {
+        if (optionAnimationRoutine != null)
+        {
+            StopCoroutine(optionAnimationRoutine);
+            optionAnimationRoutine = null;
+        }
+
+        HideConfirmation();
+        optionsOpen = false;
+        if (optionPanel != null)
+        {
+            SetOptionPanelImmediate(false);
+        }
+
+        SetControlsFrozen(false);
     }
 
     private void SetControlsFrozen(bool frozen)

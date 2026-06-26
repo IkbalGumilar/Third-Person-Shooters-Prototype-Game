@@ -89,6 +89,8 @@ public class EnemyShieldController : MonoBehaviour
     bool shieldExitHandled;
     Coroutine shieldBuffRoutine;
     Coroutine shieldBreakRoutine;
+    float shieldBreakOriginalAnimatorSpeed = 1f;
+    bool shieldBreakAnimatorSpeedOverridden;
     bool synchronizedAttackQueued;
     Vector3 lastAgentDestination;
     bool hasAgentDestination;
@@ -825,6 +827,7 @@ public class EnemyShieldController : MonoBehaviour
         yield return StartCoroutine(MoveBackFromPlayer(shieldBreakKnockbackDistance, shieldBreakKnockbackDuration));
 
         EquipPostShieldBreakWeapons();
+        StopMoving();
 
         string reactionLayer = HasPostShieldBreakWeapon() ? "Armed" : "Unarmed";
         string knockdownState = reactionLayer == "Armed" ? "Armed-Knockdown1" : "Unarmed-Knockdown1";
@@ -832,23 +835,44 @@ public class EnemyShieldController : MonoBehaviour
         int reactionLayerIndex = animator != null ? animator.GetLayerIndex(reactionLayer) : -1;
 
         ClearAnimatorLayersExcept(reactionLayerIndex);
-        PlayPostShieldBreakState(reactionLayer, knockdownState);
+        if (!PlayPostShieldBreakState(reactionLayer, knockdownState))
+        {
+            reactionLayer = "Unarmed";
+            knockdownState = "Unarmed-Knockdown1";
+            getupState = "Unarmed-Getup1";
+            reactionLayerIndex = animator != null ? animator.GetLayerIndex(reactionLayer) : -1;
+            ClearAnimatorLayersExcept(reactionLayerIndex);
+            PlayPostShieldBreakState(reactionLayer, knockdownState);
+        }
+
         animator?.Update(0f);
         yield return new WaitForSeconds(Mathf.Max(0f, shieldBreakKnockdownDuration));
 
-        float originalAnimatorSpeed = animator != null ? animator.speed : 1f;
-        if (animator != null)
+        BeginShieldBreakGetupSpeedOverride();
+
+        bool playedGetup = PlayPostShieldBreakState(reactionLayer, getupState);
+        if (!playedGetup && reactionLayer != "Unarmed")
         {
-            animator.speed = Mathf.Max(0.01f, shieldBreakGetupSpeed);
+            reactionLayer = "Unarmed";
+            reactionLayerIndex = animator != null ? animator.GetLayerIndex(reactionLayer) : -1;
+            ClearAnimatorLayersExcept(reactionLayerIndex);
+            playedGetup = PlayPostShieldBreakState(reactionLayer, "Unarmed-Getup1");
         }
 
-        PlayPostShieldBreakState(reactionLayer, getupState);
+        if (playedGetup && animator != null && reactionLayerIndex > 0)
+        {
+            animator.SetLayerWeight(reactionLayerIndex, 1f);
+        }
+
         animator?.Update(0f);
-        yield return new WaitForSeconds(Mathf.Max(0f, shieldBreakGetupDuration));
+        float getupWaitDuration = playedGetup
+            ? GetCurrentShieldBreakStateDuration(reactionLayerIndex, shieldBreakGetupDuration)
+            : Mathf.Max(0f, shieldBreakGetupDuration);
+        yield return new WaitForSeconds(getupWaitDuration);
 
         if (animator != null)
         {
-            animator.speed = originalAnimatorSpeed;
+            RestoreShieldBreakAnimatorSpeed();
             if (reactionLayerIndex > 0)
             {
                 animator.SetLayerWeight(reactionLayerIndex, 0f);
@@ -912,20 +936,68 @@ public class EnemyShieldController : MonoBehaviour
                (rangedWeaponController != null && rangedWeaponController.CurrentWeapon != null);
     }
 
-    void PlayPostShieldBreakState(string layerName, string stateName)
+    bool PlayPostShieldBreakState(string layerName, string stateName)
+    {
+        if (animator == null)
+        {
+            return false;
+        }
+
+        int layer = animator.GetLayerIndex(layerName);
+        if (layer < 0)
+        {
+            return false;
+        }
+
+        return PlayStateImmediately(layer, layerName, stateName);
+    }
+
+    float GetCurrentShieldBreakStateDuration(int layerIndex, float fallbackDuration)
+    {
+        float minimumDuration = Mathf.Max(0f, fallbackDuration);
+        if (animator == null || layerIndex < 0)
+        {
+            return minimumDuration;
+        }
+
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(layerIndex);
+        if (stateInfo.length <= 0f)
+        {
+            return minimumDuration;
+        }
+
+        float speed = Mathf.Max(0.01f, Mathf.Abs(animator.speed));
+        float adjustedDuration = stateInfo.length > minimumDuration + 0.05f
+            ? stateInfo.length / speed
+            : stateInfo.length;
+        return Mathf.Max(minimumDuration, adjustedDuration);
+    }
+
+    void BeginShieldBreakGetupSpeedOverride()
     {
         if (animator == null)
         {
             return;
         }
 
-        int layer = animator.GetLayerIndex(layerName);
-        if (layer < 0)
+        if (!shieldBreakAnimatorSpeedOverridden)
+        {
+            shieldBreakOriginalAnimatorSpeed = animator.speed;
+            shieldBreakAnimatorSpeedOverridden = true;
+        }
+
+        animator.speed = Mathf.Max(0.01f, shieldBreakGetupSpeed);
+    }
+
+    void RestoreShieldBreakAnimatorSpeed()
+    {
+        if (animator == null || !shieldBreakAnimatorSpeedOverridden)
         {
             return;
         }
 
-        PlayStateImmediately(layer, layerName, stateName);
+        animator.speed = shieldBreakOriginalAnimatorSpeed;
+        shieldBreakAnimatorSpeedOverridden = false;
     }
 
     void PlayDefenseStateImmediately(string stateName)
@@ -1025,6 +1097,8 @@ public class EnemyShieldController : MonoBehaviour
 
     void StopShieldActions()
     {
+        RestoreShieldBreakAnimatorSpeed();
+
         if (shieldBuffRoutine != null)
         {
             StopCoroutine(shieldBuffRoutine);

@@ -423,7 +423,61 @@ public class Enemy : MonoBehaviour
         }
 
         animator.speed = 1f;
+        ResetAnimatorLocomotionParameters();
+        ClearNonBaseLayerWeights();
         EnemyAnimationLayers.ReleaseLowerPriority(animator, AnimationLayerPriority.Death);
+    }
+
+    void ResetAnimatorLocomotionParameters()
+    {
+        SetAnimatorFloatIfExists("Speed", 0f);
+        SetAnimatorBoolIfExists("IsChasing", false);
+    }
+
+    void ClearNonBaseLayerWeights()
+    {
+        for (int i = 1; i < animator.layerCount; i++)
+        {
+            animator.SetLayerWeight(i, 0f);
+        }
+    }
+
+    void SetAnimatorFloatIfExists(string parameterName, float value)
+    {
+        if (animator == null || string.IsNullOrEmpty(parameterName))
+        {
+            return;
+        }
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.type == AnimatorControllerParameterType.Float && parameter.name == parameterName)
+            {
+                animator.SetFloat(parameterName, value);
+                return;
+            }
+        }
+    }
+
+    void SetAnimatorBoolIfExists(string parameterName, bool value)
+    {
+        if (animator == null || string.IsNullOrEmpty(parameterName))
+        {
+            return;
+        }
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.type == AnimatorControllerParameterType.Bool && parameter.name == parameterName)
+            {
+                animator.SetBool(parameterName, value);
+                return;
+            }
+        }
     }
 
     bool HasAnimatorTrigger(string parameterName)
@@ -543,6 +597,12 @@ public class Enemy : MonoBehaviour
         if (!animator.HasState(layerIndex, stateHash))
         {
             return false;
+        }
+
+        if (layerIndex == 0)
+        {
+            animator.Play(stateHash, layerIndex, 0f);
+            return true;
         }
 
         if (!EnemyAnimationLayers.TryClaimLayer(

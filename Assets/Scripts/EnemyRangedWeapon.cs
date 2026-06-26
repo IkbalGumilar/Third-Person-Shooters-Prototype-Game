@@ -30,6 +30,12 @@ public class EnemyRangedWeapon : ScriptableObject
     [Range(0f, 100f)] public float statusEffectChance = 0f;
     public StatusEffectData[] statusEffects;
 
+    [Header("Knockback")]
+    [Range(0f, 100f)] public float knockbackChance = 0f;
+    public float knockbackPower = 0f;
+    public float maxKnockbackDistance = 0f;
+    public float knockbackDuration = 0.15f;
+
     [Header("Aim")]
     public Vector2 aimLockDelayRange = new Vector2(0.1f, 0.5f);
     public float aimTargetHeight = 1f;
@@ -45,6 +51,8 @@ public class EnemyRangedWeapon : ScriptableObject
     public float crossbowMeleeDamage = 12f;
     public float crossbowMeleeDelay = 0.25f;
     public float crossbowMeleeCooldown = 1f;
+    public float rangedMeleeKnockbackDistance = 0f;
+    public float rangedMeleeKnockbackDuration = 0.25f;
     [Range(0f, 100f)] public float crossbowMeleeStatusEffectChance = 0f;
     public StatusEffectData[] crossbowMeleeStatusEffects;
 
@@ -64,6 +72,8 @@ public class EnemyRangedWeapon : ScriptableObject
     public string crossbowReloadStateName = "2Hand-Crossbow-Reload";
     [HideInInspector]
     public string[] crossbowMeleeStateNames = { "2Hand-Crossbow-Attack-Kick-L1", "2Hand-Crossbow-Attack-Kick-R1", "2Hand-Crossbow-Attack-Kick-L2", "2Hand-Crossbow-Attack-Kick-R2" };
+    [HideInInspector]
+    public string[] shotgunMeleeStateNames = { "Shooting-Attack-Kick-L1", "Shooting-Attack-Kick-R1", "Shooting-Attack-Kick-L2", "Shooting-Attack-Kick-R2" };
     [HideInInspector]
     public string[] shotgunShootStateNames = { "Shooting-Fire-Rifle1", "Shooting-Fire-Rifle2", "Shooting-Attack1" };
     [HideInInspector]

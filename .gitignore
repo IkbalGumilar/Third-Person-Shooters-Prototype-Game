@@ -29,6 +29,10 @@ Thumbs.db
 # JetBrains
 .idea/
 
+# Local agent config
+.agen/
+.agents/
+
 # Burst cache
 [Bb]urst[Cc]ache/
 

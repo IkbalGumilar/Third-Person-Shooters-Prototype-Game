@@ -137,6 +137,7 @@ public class EnemyAI : MonoBehaviour
     private Coroutine supportBuffFadeRoutine;
     private int supportBuffLayerIndex = -1;
     private bool supportBuffLocomotionSuppressed;
+    private bool persistentChaseTarget;
     private Vector3 lastAgentDestination;
     private bool hasAgentDestination;
     private float nextAgentDestinationUpdateTime;
@@ -218,6 +219,7 @@ public class EnemyAI : MonoBehaviour
         supportBuffFadeTarget = -1f;
         unarmedAttackLocomotionSuppressed = false;
         supportBuffLocomotionSuppressed = false;
+        persistentChaseTarget = false;
         locomotionSuppressionCount = 0;
         activeWeaponLocomotionLayer = -1;
         activeWeaponLocomotionStateHash = 0;
@@ -232,7 +234,13 @@ public class EnemyAI : MonoBehaviour
     void OnDisable()
     {
         activeEnemies.Remove(this);
-        StopForDeathAnimation();
+        if (enemy != null && enemy.IsDead)
+        {
+            StopForDeathAnimation();
+            return;
+        }
+
+        StopMoving();
     }
 
     void RegisterActiveEnemy()
@@ -345,10 +353,25 @@ public class EnemyAI : MonoBehaviour
         }
 
         float loseTargetRange = GetLoseTargetRange();
-        if ((currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack) && distanceToPlayerSqr > loseTargetRange * loseTargetRange)
+        if (!persistentChaseTarget && (currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack) && distanceToPlayerSqr > loseTargetRange * loseTargetRange)
         {
             EnterIdle();
         }
+    }
+
+    public void SetPersistentChaseTarget(Transform target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        ignorePlayerTarget = false;
+        isCelebrating = false;
+        playerTarget = target;
+        persistentChaseTarget = true;
+        shotAlertUntilTime = Mathf.Infinity;
+        EnterChase();
     }
 
     public void ApplyShotAlert(bool broadcastToNearby)
@@ -580,6 +603,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        SetRangedAimTargetVisible(true);
         float attackRange = GetAttackRange();
         float enterAttackRange = attackRange * AttackEnterRangeMultiplier;
         if ((transform.position - playerTarget.position).sqrMagnitude <= enterAttackRange * enterAttackRange)
@@ -600,9 +624,18 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        SetRangedAimTargetVisible(true);
         float attackRange = GetAttackRange();
         float exitAttackRange = attackRange * AttackExitRangeMultiplier;
         if ((transform.position - playerTarget.position).sqrMagnitude > exitAttackRange * exitAttackRange)
+        {
+            EnterChase();
+            return;
+        }
+
+        if (rangedWeaponController != null
+            && rangedWeaponController.CurrentWeapon != null
+            && !rangedWeaponController.CanHoldAttackPosition(playerTarget))
         {
             EnterChase();
             return;
@@ -672,6 +705,7 @@ public class EnemyAI : MonoBehaviour
 
     void EnterIdle()
     {
+        SetRangedAimTargetVisible(false);
         currentState = EnemyAIState.Idle;
         idleTimer = GetModifiedEnemyStat(StatusEffectStat.EnemyIdleDuration, idleDuration);
         hasDestination = false;
@@ -681,6 +715,7 @@ public class EnemyAI : MonoBehaviour
 
     void EnterPatrol()
     {
+        SetRangedAimTargetVisible(false);
         currentState = EnemyAIState.Patrol;
         hasDestination = false;
         RequestImmediateBehaviourUpdate();
@@ -695,6 +730,7 @@ public class EnemyAI : MonoBehaviour
 
         bool wasAggressive = currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack;
         currentState = EnemyAIState.Chase;
+        SetRangedAimTargetVisible(true);
         hasDestination = false;
         RequestImmediateBehaviourUpdate();
 
@@ -721,9 +757,20 @@ public class EnemyAI : MonoBehaviour
         }
 
         currentState = EnemyAIState.Attack;
+        SetRangedAimTargetVisible(true);
         hasDestination = false;
         StopMoving();
         RequestImmediateBehaviourUpdate();
+    }
+
+    void SetRangedAimTargetVisible(bool visible)
+    {
+        if (rangedWeaponController == null || rangedWeaponController.CurrentWeapon == null)
+        {
+            return;
+        }
+
+        rangedWeaponController.SetAimTargetVisible(playerTarget, visible);
     }
 
     void TryStartAlertAnimation()
@@ -1288,6 +1335,11 @@ public class EnemyAI : MonoBehaviour
     {
         StopMoving();
         isCelebrating = false;
+        currentState = EnemyAIState.Idle;
+        hasDestination = false;
+        hasAgentDestination = false;
+        smoothedAnimatorSpeed = 0f;
+        animatorSpeedVelocity = 0f;
 
         if (knockbackCoroutine != null)
         {
@@ -1308,7 +1360,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         isAlerting = false;
-        SetLocomotionSuppressed(false);
+        ForceStopLocomotionAnimation();
 
         CancelUnarmedAttack();
 
@@ -1326,6 +1378,37 @@ public class EnemyAI : MonoBehaviour
         {
             animator.SetLayerWeight(layerIndex, 0f);
         }
+
+        ForceStopLocomotionAnimation();
+    }
+
+    void ForceStopLocomotionAnimation()
+    {
+        locomotionSuppressionCount = 1;
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (hasSpeedParameter)
+        {
+            animator.SetFloat(speedParameter, 0f);
+        }
+
+        if (hasChaseParameter)
+        {
+            animator.SetBool(chaseParameter, false);
+        }
+
+        if (activeWeaponLocomotionLayer > 0)
+        {
+            animator.SetLayerWeight(activeWeaponLocomotionLayer, 0f);
+        }
+
+        activeWeaponLocomotionLayer = -1;
+        activeWeaponLocomotionStateHash = 0;
+        EnemyAnimationLayers.SetExclusiveLayer(animator, -1);
     }
 
     // Hit reactions temporarily own a full-body layer. Clear only transient

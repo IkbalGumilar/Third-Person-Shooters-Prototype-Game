@@ -28240,7 +28240,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: 1Hand-Pistol
     m_StateMachine: {fileID: -900000000000000003}
-    m_Mask: {fileID: 0}
+    m_Mask: {fileID: 31900000, guid: 6b5f3f19d90389c37af3b286f7feecba, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -28324,7 +28324,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: 2Hand-Crossbow
     m_StateMachine: {fileID: -900000000000000008}
-    m_Mask: {fileID: 0}
+    m_Mask: {fileID: 31900000, guid: 6b5f3f19d90389c37af3b286f7feecba, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -28348,7 +28348,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: 2Hand-Shooting
     m_StateMachine: {fileID: -900000000000000009}
-    m_Mask: {fileID: 0}
+    m_Mask: {fileID: 31900000, guid: 6b5f3f19d90389c37af3b286f7feecba, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -28444,7 +28444,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: Armed
     m_StateMachine: {fileID: -900000000000000013}
-    m_Mask: {fileID: 0}
+    m_Mask: {fileID: 31900000, guid: 6b5f3f19d90389c37af3b286f7feecba, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0

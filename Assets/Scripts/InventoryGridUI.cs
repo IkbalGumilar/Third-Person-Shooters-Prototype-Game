@@ -43,6 +43,14 @@ public class InventoryGridUI : MonoBehaviour
     public bool startClosed = true;
     public bool closeWhenPlayerDamaged = true;
 
+    [Header("Open / Close Animation")]
+    public bool animateOpenClose = true;
+    public RectTransform inventoryPanelRect;
+    public RectTransform informationTabRect;
+    public float inventoryAnimationOffsetX = 1400f;
+    public float inventoryOpenDuration = 0.28f;
+    public float inventoryCloseDuration = 0.22f;
+
     [Header("Grid")]
     public RectTransform slotRoot;
     public RectTransform slotTemplate;
@@ -130,8 +138,16 @@ public class InventoryGridUI : MonoBehaviour
     int contextMenuItemIndex = -1;
     int previewedItemIndex = -1;
     Coroutine notificationRoutine;
+    Coroutine openCloseAnimationRoutine;
     WorldItemPickup activePickupPrompt;
     float nextLowHealthPromptTime;
+    bool inventoryOpenState;
+    bool openStateInitialized;
+    bool inventoryAnimationStateInitialized;
+    Vector2 inventoryPanelOpenPosition;
+    Vector2 itemRootOpenPosition;
+    Vector2 throwAwayOpenPosition;
+    Vector2 informationTabOpenPosition;
     private KontrolPemain kontrolPemain;
 
     void Awake()
@@ -152,9 +168,16 @@ public class InventoryGridUI : MonoBehaviour
 
     void OnDisable()
     {
+        if (openCloseAnimationRoutine != null)
+        {
+            StopCoroutine(openCloseAnimationRoutine);
+            openCloseAnimationRoutine = null;
+        }
+
         kontrolPemain?.Disable();
         UnsubscribePlayerHealth();
         SetControlsFrozen(false);
+        inventoryOpenState = false;
         IsAnyInventoryOpen = false;
     }
 
@@ -282,6 +305,56 @@ public class InventoryGridUI : MonoBehaviour
             return;
         }
 
+        FindMissingReferences();
+        CacheInventoryAnimationState();
+
+        if (openCloseAnimationRoutine != null)
+        {
+            StopCoroutine(openCloseAnimationRoutine);
+            openCloseAnimationRoutine = null;
+        }
+
+        if (open)
+        {
+            SetInventoryRootVisible(true);
+            Refresh();
+            if (animateOpenClose && openStateInitialized)
+            {
+                SetInventoryAnimatedRectsAtClosed();
+                openCloseAnimationRoutine = StartCoroutine(AnimateInventoryOpenClose(true));
+            }
+            else
+            {
+                SetInventoryAnimatedRectsAtOpen();
+            }
+        }
+        else
+        {
+            CloseContextMenu();
+            if (animateOpenClose && openStateInitialized && IsInventoryRootVisible())
+            {
+                openCloseAnimationRoutine = StartCoroutine(AnimateInventoryOpenClose(false));
+            }
+            else
+            {
+                SetInventoryAnimatedRectsAtClosed();
+                SetInventoryRootVisible(false);
+            }
+        }
+
+        inventoryOpenState = open;
+        openStateInitialized = true;
+        IsAnyInventoryOpen = open;
+        SetControlsFrozen(open && freezeControlsWhenOpen);
+    }
+
+    void SetInventoryRootVisible(bool visible)
+    {
+        if (inventoryRoot == null)
+        {
+            return;
+        }
+
         if (inventoryRoot == gameObject)
         {
             inventoryCanvasGroup = inventoryCanvasGroup != null
@@ -293,29 +366,17 @@ public class InventoryGridUI : MonoBehaviour
                 inventoryCanvasGroup = inventoryRoot.AddComponent<CanvasGroup>();
             }
 
-            inventoryCanvasGroup.alpha = open ? 1f : 0f;
-            inventoryCanvasGroup.interactable = open;
-            inventoryCanvasGroup.blocksRaycasts = open;
+            inventoryCanvasGroup.alpha = visible ? 1f : 0f;
+            inventoryCanvasGroup.interactable = visible;
+            inventoryCanvasGroup.blocksRaycasts = visible;
         }
         else
         {
-            inventoryRoot.SetActive(open);
+            inventoryRoot.SetActive(visible);
         }
-
-        if (open)
-        {
-            Refresh();
-        }
-        else
-        {
-            CloseContextMenu();
-        }
-
-        IsAnyInventoryOpen = open;
-        SetControlsFrozen(open && freezeControlsWhenOpen);
     }
 
-    bool IsOpen()
+    bool IsInventoryRootVisible()
     {
         if (inventoryRoot == null)
         {
@@ -332,6 +393,156 @@ public class InventoryGridUI : MonoBehaviour
         }
 
         return inventoryRoot.activeSelf;
+    }
+
+    bool IsOpen()
+    {
+        if (inventoryRoot == null)
+        {
+            return false;
+        }
+
+        return inventoryOpenState;
+    }
+
+    IEnumerator AnimateInventoryOpenClose(bool opening)
+    {
+        float duration = Mathf.Max(0.01f, opening ? inventoryOpenDuration : inventoryCloseDuration);
+        float elapsed = 0f;
+        RectTransform animatedItemRoot = GetItemRootAnimationRect();
+
+        Vector2 inventoryFrom = GetAnchoredPosition(inventoryPanelRect);
+        Vector2 itemRootFrom = GetAnchoredPosition(animatedItemRoot);
+        Vector2 throwAwayFrom = GetAnchoredPosition(throwAwayDropZone);
+        Vector2 informationFrom = GetAnchoredPosition(informationTabRect);
+
+        Vector2 inventoryTo = opening ? inventoryPanelOpenPosition : inventoryPanelOpenPosition + Vector2.right * inventoryAnimationOffsetX;
+        Vector2 itemRootTo = opening ? itemRootOpenPosition : itemRootOpenPosition + Vector2.right * inventoryAnimationOffsetX;
+        Vector2 throwAwayTo = opening ? throwAwayOpenPosition : throwAwayOpenPosition + Vector2.right * inventoryAnimationOffsetX;
+        Vector2 informationTo = opening ? informationTabOpenPosition : informationTabOpenPosition + Vector2.left * inventoryAnimationOffsetX;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = opening ? EaseOutCubic(t) : EaseInCubic(t);
+
+            SetAnchoredPosition(inventoryPanelRect, Vector2.LerpUnclamped(inventoryFrom, inventoryTo, eased));
+            SetAnchoredPosition(animatedItemRoot, Vector2.LerpUnclamped(itemRootFrom, itemRootTo, eased));
+            SetAnchoredPosition(throwAwayDropZone, Vector2.LerpUnclamped(throwAwayFrom, throwAwayTo, eased));
+            SetAnchoredPosition(informationTabRect, Vector2.LerpUnclamped(informationFrom, informationTo, eased));
+            yield return null;
+        }
+
+        if (opening)
+        {
+            SetInventoryAnimatedRectsAtOpen();
+        }
+        else
+        {
+            SetInventoryAnimatedRectsAtClosed();
+            SetInventoryRootVisible(false);
+        }
+
+        openCloseAnimationRoutine = null;
+    }
+
+    void CacheInventoryAnimationState()
+    {
+        ResolveInventoryAnimationRects();
+        if (inventoryAnimationStateInitialized)
+        {
+            return;
+        }
+
+        inventoryPanelOpenPosition = GetAnchoredPosition(inventoryPanelRect);
+        itemRootOpenPosition = GetAnchoredPosition(GetItemRootAnimationRect());
+        throwAwayOpenPosition = GetAnchoredPosition(throwAwayDropZone);
+        informationTabOpenPosition = GetAnchoredPosition(informationTabRect);
+        inventoryAnimationStateInitialized = true;
+    }
+
+    void ResolveInventoryAnimationRects()
+    {
+        if (inventoryPanelRect == null)
+        {
+            inventoryPanelRect = slotRoot;
+        }
+
+        if (throwAwayDropZone == null)
+        {
+            ResolveThrowAwayDropZone();
+        }
+
+        if (informationTabRect == null)
+        {
+            Transform informationTab = null;
+            if (inventoryRoot != null)
+            {
+                informationTab = FindChildByName(inventoryRoot.transform, "InformationTab");
+                if (informationTab == null)
+                {
+                    informationTab = FindChildByName(inventoryRoot.transform, "Information Tab");
+                }
+                if (informationTab == null)
+                {
+                    informationTab = FindChildByName(inventoryRoot.transform, "informationTAb");
+                }
+            }
+
+            informationTabRect = informationTab as RectTransform;
+        }
+    }
+
+    void SetInventoryAnimatedRectsAtOpen()
+    {
+        SetAnchoredPosition(inventoryPanelRect, inventoryPanelOpenPosition);
+        SetAnchoredPosition(GetItemRootAnimationRect(), itemRootOpenPosition);
+        SetAnchoredPosition(throwAwayDropZone, throwAwayOpenPosition);
+        SetAnchoredPosition(informationTabRect, informationTabOpenPosition);
+    }
+
+    void SetInventoryAnimatedRectsAtClosed()
+    {
+        SetAnchoredPosition(inventoryPanelRect, inventoryPanelOpenPosition + Vector2.right * inventoryAnimationOffsetX);
+        SetAnchoredPosition(GetItemRootAnimationRect(), itemRootOpenPosition + Vector2.right * inventoryAnimationOffsetX);
+        SetAnchoredPosition(throwAwayDropZone, throwAwayOpenPosition + Vector2.right * inventoryAnimationOffsetX);
+        SetAnchoredPosition(informationTabRect, informationTabOpenPosition + Vector2.left * inventoryAnimationOffsetX);
+    }
+
+    RectTransform GetItemRootAnimationRect()
+    {
+        if (itemRoot == null || inventoryPanelRect == null)
+        {
+            return itemRoot;
+        }
+
+        return itemRoot.IsChildOf(inventoryPanelRect) ? null : itemRoot;
+    }
+
+    Vector2 GetAnchoredPosition(RectTransform rectTransform)
+    {
+        return rectTransform != null ? rectTransform.anchoredPosition : Vector2.zero;
+    }
+
+    void SetAnchoredPosition(RectTransform rectTransform, Vector2 position)
+    {
+        if (rectTransform != null)
+        {
+            rectTransform.anchoredPosition = position;
+        }
+    }
+
+    float EaseOutCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - Mathf.Pow(1f - t, 3f);
+    }
+
+    float EaseInCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * t;
     }
 
     public void Refresh()
@@ -2574,6 +2785,15 @@ public class InventoryGridUI : MonoBehaviour
 
     void CloseForPlayerDeath()
     {
+        if (openCloseAnimationRoutine != null)
+        {
+            StopCoroutine(openCloseAnimationRoutine);
+            openCloseAnimationRoutine = null;
+        }
+
+        CacheInventoryAnimationState();
+        SetInventoryAnimatedRectsAtClosed();
+
         if (inventoryRoot == gameObject)
         {
             inventoryCanvasGroup = inventoryCanvasGroup != null
@@ -2593,6 +2813,7 @@ public class InventoryGridUI : MonoBehaviour
 
         CloseContextMenu();
         ResetThrowAwayDragFeedback();
+        inventoryOpenState = false;
         IsAnyInventoryOpen = false;
 
         // Do not restore the input state captured while inventory was open.

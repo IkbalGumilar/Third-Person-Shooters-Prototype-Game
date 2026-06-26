@@ -168,6 +168,7 @@ public class PlayerMovement : MonoBehaviour
     public string twoHandKnockbackState1 = "Shooting-Knockback-Back2";
     public string twoHandKnockbackState2 = "Shooting-Knockback-Back2";
     public float knockbackAnimationFade = 0.06f;
+    [Min(0f)] public float knockdownKnockbackDistanceThreshold = 2f;
 
     // Retained only to migrate old scenes that do not yet have PlayerGuardBreak.
     [HideInInspector] public float guardBreakDuration = 3f;
@@ -497,6 +498,23 @@ public class PlayerMovement : MonoBehaviour
 
         MoveActionAlongGround(flatDirection * Mathf.Max(0f, distance - moved));
         knockbackRoutine = null;
+        TryTriggerKnockdownAfterKnockback(flatDirection, distance);
+    }
+
+    void TryTriggerKnockdownAfterKnockback(Vector3 knockbackDirection, float distance)
+    {
+        if (IsGuardBroken || guardBreak == null || distance <= knockdownKnockbackDistanceThreshold)
+        {
+            return;
+        }
+
+        PlayerHealth health = GetComponent<PlayerHealth>();
+        if (health != null && health.IsDead)
+        {
+            return;
+        }
+
+        guardBreak.Trigger(knockbackDirection, true);
     }
 
     public void UpdateExternalActionGravity()

@@ -7,6 +7,8 @@ using UnityEngine.UI;
 /// <summary>Handles main-menu actions and the asynchronous gameplay loading transition.</summary>
 public sealed class SceneChanger : MonoBehaviour
 {
+    private static bool gameFinishedThisSession;
+
     [Header("Scene")]
     [SerializeField] private string mainGameSceneName = "MainScene";
 
@@ -15,6 +17,15 @@ public sealed class SceneChanger : MonoBehaviour
     [SerializeField, Min(0f)] private float minimumLoadingScreenDuration = 0.75f;
     [SerializeField, Min(0.1f)] private float progressSmoothingSpeed = 2f;
 
+    [Header("Finished Menu Layout")]
+    [SerializeField] private bool gameFinished;
+    [SerializeField] private RectTransform quitButtonRect;
+    [SerializeField] private float defaultQuitButtonY = 100f;
+    [SerializeField] private float finishedQuitButtonY = 0f;
+    [SerializeField] private bool clampQuitButtonWidthToParent = true;
+    [SerializeField, Range(0.1f, 1f)] private float quitButtonMaxParentWidthPercent = 0.85f;
+    [SerializeField, Min(120f)] private float quitButtonMinimumWidth = 240f;
+
     private GameObject selectMenuPanel;
     private GameObject loadingPanel;
     private CanvasGroup loadingCanvasGroup;
@@ -22,6 +33,22 @@ public sealed class SceneChanger : MonoBehaviour
     private TMP_Text loadingText;
     private Button[] menuButtons;
     private bool isLoading;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeGameFinishedFlag()
+    {
+        gameFinishedThisSession = false;
+    }
+
+    public static void MarkGameFinishedForCurrentSession()
+    {
+        gameFinishedThisSession = true;
+    }
+
+    public static void ClearGameFinishedForCurrentSession()
+    {
+        gameFinishedThisSession = false;
+    }
 
     private void Awake()
     {
@@ -37,8 +64,20 @@ public sealed class SceneChanger : MonoBehaviour
         }
 
         menuButtons = GetComponentsInChildren<Button>(true);
+        ApplyFinishedMenuLayout();
 
         loadingPanel.SetActive(false);
+    }
+
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
+        SyncRuntimeFinishedFlagWithInspector();
+        ApplyFinishedMenuLayout();
     }
 
     public void LoadMainGame()
@@ -47,6 +86,8 @@ public sealed class SceneChanger : MonoBehaviour
         {
             return;
         }
+
+        InGameOptionsMenu.SetInputBlocked(false);
 
         if (!Application.CanStreamedLevelBeLoaded(mainGameSceneName))
         {
@@ -150,6 +191,80 @@ public sealed class SceneChanger : MonoBehaviour
 
         loadingSlider = loadingPanel.GetComponentInChildren<Slider>(true);
         loadingText = loadingPanel.GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private void ApplyFinishedMenuLayout()
+    {
+        if (quitButtonRect == null)
+        {
+            quitButtonRect = FindSceneRectTransform("Quit");
+        }
+
+        if (quitButtonRect == null)
+        {
+            return;
+        }
+
+        Vector2 position = quitButtonRect.anchoredPosition;
+        position.y = (gameFinished || gameFinishedThisSession)
+            ? finishedQuitButtonY
+            : defaultQuitButtonY;
+        quitButtonRect.anchoredPosition = position;
+        ClampQuitButtonWidth();
+    }
+
+    private void ClampQuitButtonWidth()
+    {
+        RectTransform parentRect = quitButtonRect != null ? quitButtonRect.parent as RectTransform : null;
+        if (!clampQuitButtonWidthToParent || quitButtonRect == null || parentRect == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        float parentWidth = parentRect.rect.width;
+        if (parentWidth <= 0f)
+        {
+            return;
+        }
+
+        Vector2 size = quitButtonRect.sizeDelta;
+        float maxWidth = Mathf.Max(quitButtonMinimumWidth, parentWidth * quitButtonMaxParentWidthPercent);
+        size.x = Mathf.Min(size.x, maxWidth);
+        quitButtonRect.sizeDelta = size;
+    }
+
+    private void SyncRuntimeFinishedFlagWithInspector()
+    {
+        if (gameFinished)
+        {
+            gameFinishedThisSession = true;
+        }
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
+        {
+            gameFinishedThisSession = false;
+        }
+    }
+
+    private static RectTransform FindSceneRectTransform(string objectName)
+    {
+        Transform[] transforms = Resources.FindObjectsOfTypeAll<Transform>();
+        Scene activeScene = SceneManager.GetActiveScene();
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform candidate = transforms[i];
+            if (candidate == null
+                || candidate.name != objectName
+                || !candidate.gameObject.scene.IsValid()
+                || candidate.gameObject.scene != activeScene)
+            {
+                continue;
+            }
+
+            return candidate.GetComponent<RectTransform>();
+        }
+
+        return null;
     }
 
     private IEnumerator FadeLoadingPanel(float from, float to)

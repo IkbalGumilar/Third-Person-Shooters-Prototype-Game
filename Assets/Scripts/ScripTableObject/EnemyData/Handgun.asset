@@ -32,9 +32,9 @@ MonoBehaviour:
   shotAlertMinDuration: 5
   shotAlertMaxDuration: 60
   idleDuration: 1.5
-  patrolSpeed: 1.8
+  patrolSpeed: 1.5
   walkSpeedMultiplier: 0.6
-  chaseSpeed: 3.3
+  chaseSpeed: 3
   patrolSpeedMultiplier: 1.35
   crossbowPatrolSpeedMultiplier: 1.85
   spearPatrolSpeedMultiplier: 1.85

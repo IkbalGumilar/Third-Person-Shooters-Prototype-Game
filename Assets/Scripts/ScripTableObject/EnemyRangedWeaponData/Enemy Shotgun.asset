@@ -15,7 +15,7 @@ MonoBehaviour:
   weaponName: Enemy Shotgun
   weaponKind: 3
   weaponPrefab: {fileID: 1049767121806783314, guid: 61d2e9f1bcba672559cf04d7d5432d91, type: 3}
-  damage: 20
+  damage: 45
   attackRange: 5
   attackCooldown: 1
   damageDelay: 0.18
@@ -27,6 +27,12 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   requireLineOfSight: 1
+  statusEffectChance: 0
+  statusEffects: []
+  knockbackChance: 80
+  knockbackPower: 100
+  maxKnockbackDistance: 2.5
+  knockbackDuration: 0.35
   aimLockDelayRange: {x: 0.25, y: 0.45}
   aimTargetHeight: 1
   allowDirectHitFallback: 0
@@ -39,6 +45,10 @@ MonoBehaviour:
   crossbowMeleeDamage: 12
   crossbowMeleeDelay: 0.25
   crossbowMeleeCooldown: 1
+  rangedMeleeKnockbackDistance: 3
+  rangedMeleeKnockbackDuration: 0.3
+  crossbowMeleeStatusEffectChance: 0
+  crossbowMeleeStatusEffects: []
   rangeLayerName: 2Hand-Shooting
   handgunShootStateNames:
   - 1 pistol 1
@@ -65,10 +75,14 @@ MonoBehaviour:
   - Crossbow Kick 2
   - Crossbow Kick 3
   - Crossbow Kick 4
+  shotgunMeleeStateNames:
+  - Shooting-Attack-Kick-L1
+  - Shooting-Attack-Kick-R1
+  - Shooting-Attack-Kick-L2
+  - Shooting-Attack-Kick-R2
   shotgunShootStateNames:
   - Shooting-Fire-Rifle1
   - Shooting-Fire-Rifle2
-  - Shooting-Attack1
   shotgunReloadStateName: Shooting-Reload-Start
   animationCrossFade: 0.08
   holdPosition: {x: 0, y: 0, z: 0}
