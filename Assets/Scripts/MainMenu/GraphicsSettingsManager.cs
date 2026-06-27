@@ -83,9 +83,9 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         if (aaDropdown != null)
         {
-            int[] antiAliasingOptions = { 0, 2, 4, 8 };
-            int option = Mathf.Clamp(aaDropdown.value, 0, antiAliasingOptions.Length - 1);
-            QualitySettings.antiAliasing = antiAliasingOptions[option];
+            int option = AntiAliasingSettingsUtility.GetEffectiveOptionIndex(aaDropdown.value);
+            AntiAliasingSettingsUtility.Apply(option);
+            aaDropdown.SetValueWithoutNotify(option);
             PlayerPrefs.SetInt(AntiAliasingKey, option);
         }
 
@@ -203,7 +203,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         aaDropdown.ClearOptions();
-        aaDropdown.AddOptions(new List<string> { "Off", "MSAA 2x", "MSAA 4x", "MSAA 8x" });
+        aaDropdown.AddOptions(AntiAliasingSettingsUtility.GetOptionLabels());
     }
 
     private void PopulateTextureQualityOptions()
@@ -231,8 +231,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         if (aaDropdown != null)
         {
-            int defaultAa = QualitySettings.antiAliasing == 8 ? 3 : QualitySettings.antiAliasing == 4 ? 2 : QualitySettings.antiAliasing == 2 ? 1 : 0;
-            aaDropdown.SetValueWithoutNotify(Mathf.Clamp(PlayerPrefs.GetInt(AntiAliasingKey, defaultAa), 0, 3));
+            int defaultAa = AntiAliasingSettingsUtility.GetDefaultOptionIndex();
+            aaDropdown.SetValueWithoutNotify(AntiAliasingSettingsUtility.ClampOptionIndex(PlayerPrefs.GetInt(AntiAliasingKey, defaultAa)));
         }
 
         if (textureDropdown != null)

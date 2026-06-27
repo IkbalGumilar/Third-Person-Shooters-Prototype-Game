@@ -258,7 +258,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         PopulateResolutions();
         PopulateDropdown(qualityDropdown, new List<string>(QualitySettings.names));
         PopulateDropdown(shadowDropdown, new List<string> { "Off", "Hard Shadows", "All Shadows" });
-        PopulateDropdown(antiAliasingDropdown, new List<string> { "Off", "MSAA 2x", "MSAA 4x", "MSAA 8x" });
+        PopulateDropdown(antiAliasingDropdown, AntiAliasingSettingsUtility.GetOptionLabels());
         PopulateDropdown(textureDropdown, new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
         ConfigureSensitivitySlider(cameraSensitivitySlider);
         ConfigureSensitivitySlider(aimSensitivitySlider);
@@ -933,9 +933,9 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         if (antiAliasingDropdown != null)
         {
-            int[] options = { 0, 2, 4, 8 };
-            int index = Mathf.Clamp(antiAliasingDropdown.value, 0, options.Length - 1);
-            QualitySettings.antiAliasing = options[index];
+            int index = AntiAliasingSettingsUtility.GetEffectiveOptionIndex(antiAliasingDropdown.value);
+            AntiAliasingSettingsUtility.Apply(index);
+            antiAliasingDropdown.SetValueWithoutNotify(index);
             PlayerPrefs.SetInt(AntiAliasingKey, index);
         }
 
@@ -1046,8 +1046,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetDropdownValue(qualityDropdown, PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()));
         SetDropdownValue(shadowDropdown, PlayerPrefs.GetInt(ShadowKey, (int)QualitySettings.shadows));
 
-        int aaDefault = QualitySettings.antiAliasing == 8 ? 3 : QualitySettings.antiAliasing == 4 ? 2 : QualitySettings.antiAliasing == 2 ? 1 : 0;
-        SetDropdownValue(antiAliasingDropdown, PlayerPrefs.GetInt(AntiAliasingKey, aaDefault));
+        int aaDefault = AntiAliasingSettingsUtility.GetDefaultOptionIndex();
+        SetDropdownValue(antiAliasingDropdown, AntiAliasingSettingsUtility.ClampOptionIndex(PlayerPrefs.GetInt(AntiAliasingKey, aaDefault)));
         SetDropdownValue(textureDropdown, PlayerPrefs.GetInt(TextureKey, QualitySettings.globalTextureMipmapLimit));
         SetToggleValue(vSyncToggle, PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
         SetToggleValue(fullscreenToggle, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
