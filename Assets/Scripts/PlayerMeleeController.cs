@@ -41,7 +41,8 @@ public class PlayerMeleeController : MonoBehaviour
     public bool requireUnawareTarget = true;
     public bool requireBehindTarget = true;
     public bool allowBossStealthKill;
-    public float stealthRange = 1f;
+    public float stealthRange = 2f;
+    public float stealthApproachStopDistance = 1f;
     [Range(1f, 180f)] public float stealthPlayerFacingAngle = 110f;
     [Range(1f, 180f)] public float stealthBackAngle = 120f;
     public TMP_Text stealthPromptText;
@@ -62,6 +63,9 @@ public class PlayerMeleeController : MonoBehaviour
     public bool applyStealthCameraLocalEulerAngles = true;
     public Vector3 stealthCameraLocalEulerAngles = new Vector3(0f, -15f, 0f);
     [Range(0.05f, 1f)] public float stealthAnimatorSpeed = 0.45f;
+    public bool useGlobalStealthSlowMotion = true;
+    [Range(0.05f, 1f)] public float stealthGlobalTimeScale = 0.35f;
+    public bool scaleFixedDeltaTimeDuringStealth = true;
     [Range(0.1f, 1f)] public float stealthKillMomentNormalized = 0.8f;
     public float stealthTargetDeathDelay = 0.12f;
     public float stealthStandDelay = 0.18f;
@@ -87,6 +91,9 @@ public class PlayerMeleeController : MonoBehaviour
     private bool previousCameraLookInput;
     private bool previousAimInput;
     private float previousAnimatorSpeed = 1f;
+    private float previousTimeScale = 1f;
+    private float previousFixedDeltaTime = 0.02f;
+    private bool stealthSlowMotionApplied;
     private Quaternion previousStealthCameraLocalRotation;
     private bool hasPreviousStealthCameraLocalRotation;
     private object previousStealthDollySpline;
@@ -492,6 +499,12 @@ public class PlayerMeleeController : MonoBehaviour
             yield break;
         }
 
+        float stealthApproachDuration = GetStealthApproachDuration(meleeData, target);
+        if (stealthApproachDuration > 0f)
+        {
+            yield return MoveTowardMeleeTarget(meleeData, target, stealthApproachDuration, stealthApproachStopDistance);
+        }
+
         float animationSpeed = Mathf.Clamp(stealthAnimatorSpeed, 0.05f, 1f);
         float durationMultiplier = 1f / animationSpeed;
         Animator targetAnimator = weaponAnimator.animator;
@@ -576,6 +589,7 @@ public class PlayerMeleeController : MonoBehaviour
     {
         ResolveStealthCinemachineReferences();
         SetShootBlocked(true);
+        BeginStealthSlowMotion();
 
         if (playerMovement != null)
         {
@@ -612,6 +626,7 @@ public class PlayerMeleeController : MonoBehaviour
         }
 
         SetShootBlocked(false);
+        RestoreStealthSlowMotion();
 
         if (playerMovement != null)
         {
@@ -635,6 +650,43 @@ public class PlayerMeleeController : MonoBehaviour
 
         EndStealthCinematicCamera();
         isStealthExecuting = false;
+    }
+
+    void BeginStealthSlowMotion()
+    {
+        if (!useGlobalStealthSlowMotion || stealthSlowMotionApplied)
+        {
+            return;
+        }
+
+        previousTimeScale = Time.timeScale;
+        previousFixedDeltaTime = Time.fixedDeltaTime;
+
+        float targetTimeScale = Mathf.Clamp(stealthGlobalTimeScale, 0.05f, 1f);
+        Time.timeScale = targetTimeScale;
+        if (scaleFixedDeltaTimeDuringStealth)
+        {
+            float baseScale = previousTimeScale > 0.001f ? previousTimeScale : 1f;
+            Time.fixedDeltaTime = Mathf.Max(0.0001f, previousFixedDeltaTime * targetTimeScale / baseScale);
+        }
+
+        stealthSlowMotionApplied = true;
+    }
+
+    void RestoreStealthSlowMotion()
+    {
+        if (!stealthSlowMotionApplied)
+        {
+            return;
+        }
+
+        Time.timeScale = previousTimeScale <= 0f ? 1f : previousTimeScale;
+        if (scaleFixedDeltaTimeDuringStealth)
+        {
+            Time.fixedDeltaTime = previousFixedDeltaTime <= 0f ? 0.02f : previousFixedDeltaTime;
+        }
+
+        stealthSlowMotionApplied = false;
     }
 
     void BeginStealthCinematicCamera()
@@ -857,7 +909,39 @@ public class PlayerMeleeController : MonoBehaviour
         return Mathf.Min(Mathf.Max(minimumDuration, moveDuration), Mathf.Max(minimumDuration, animationDuration));
     }
 
+    float GetStealthApproachDuration(PlayerMeleeData meleeData, Enemy target)
+    {
+        if (meleeData == null
+            || target == null
+            || target.IsDead
+            || (playerMovement != null && !playerMovement.isGrounded))
+        {
+            return 0f;
+        }
+
+        Vector3 toTarget = target.transform.position - transform.position;
+        toTarget.y = 0f;
+        float distance = toTarget.magnitude;
+        float stopDistance = Mathf.Max(0f, stealthApproachStopDistance);
+        float moveDistance = Mathf.Max(0f, distance - stopDistance);
+        if (moveDistance <= 0.01f)
+        {
+            return 0f;
+        }
+
+        float speed = Mathf.Max(0.01f, meleeData.autoAimSpeed);
+        return moveDistance / speed;
+    }
+
     IEnumerator MoveTowardMeleeTarget(PlayerMeleeData meleeData, Enemy target, float duration)
+    {
+        float stopDistance = meleeData != null
+            ? Mathf.Max(meleeData.range + meleeData.hitRadius, meleeData.autoAimStopDistance)
+            : 1f;
+        yield return MoveTowardMeleeTarget(meleeData, target, duration, stopDistance);
+    }
+
+    IEnumerator MoveTowardMeleeTarget(PlayerMeleeData meleeData, Enemy target, float duration, float stopDistance)
     {
         if (meleeData == null || target == null || duration <= 0f)
         {
@@ -872,7 +956,6 @@ public class PlayerMeleeController : MonoBehaviour
             Vector3 toTarget = target.transform.position - transform.position;
             toTarget.y = 0f;
             float distance = toTarget.magnitude;
-            float stopDistance = Mathf.Max(meleeData.range + meleeData.hitRadius, meleeData.autoAimStopDistance);
             if (distance <= stopDistance)
             {
                 break;
@@ -902,7 +985,7 @@ public class PlayerMeleeController : MonoBehaviour
             return;
         }
 
-        Enemy enemy = IsValidMeleeTarget(meleeData, preferredTarget, meleeData.range + meleeData.hitRadius)
+        Enemy enemy = IsValidMeleeTarget(meleeData, preferredTarget, meleeData.range + meleeData.hitRadius, false)
             ? preferredTarget
             : FindBestMeleeTarget(meleeData, meleeData.range + meleeData.hitRadius);
 
@@ -981,7 +1064,7 @@ public class PlayerMeleeController : MonoBehaviour
             }
 
             Enemy enemy = hit.GetComponentInParent<Enemy>();
-            if (!IsValidMeleeTarget(meleeData, enemy, searchRange))
+            if (!IsValidMeleeTarget(meleeData, enemy, searchRange, false))
             {
                 continue;
             }
@@ -989,7 +1072,7 @@ public class PlayerMeleeController : MonoBehaviour
             Vector3 toEnemy = enemy.transform.position - transform.position;
             toEnemy.y = 0f;
             float distance = toEnemy.magnitude;
-            float angle = Vector3.Angle(GetMeleeForward(), toEnemy.normalized);
+            float angle = Vector3.Angle(GetMeleeAutoForward(), toEnemy.normalized);
             float score = distance + angle * 0.02f;
             if (score < bestScore)
             {
@@ -1135,6 +1218,11 @@ public class PlayerMeleeController : MonoBehaviour
 
     bool IsValidMeleeTarget(PlayerMeleeData meleeData, Enemy enemy, float maxRange)
     {
+        return IsValidMeleeTarget(meleeData, enemy, maxRange, true);
+    }
+
+    bool IsValidMeleeTarget(PlayerMeleeData meleeData, Enemy enemy, float maxRange, bool useCameraForward)
+    {
         if (meleeData == null || enemy == null || enemy.IsDead)
         {
             return false;
@@ -1148,8 +1236,10 @@ public class PlayerMeleeController : MonoBehaviour
             return false;
         }
 
-        float angleLimit = Mathf.Clamp(meleeData.frontAngle, 1f, 180f) * 0.5f;
-        return Vector3.Angle(GetMeleeForward(), toEnemy.normalized) <= angleLimit;
+        float targetAngle = useCameraForward ? meleeData.frontAngle : Mathf.Max(meleeData.frontAngle, 120f);
+        float angleLimit = Mathf.Clamp(targetAngle, 1f, 180f) * 0.5f;
+        Vector3 forward = useCameraForward ? GetMeleeForward() : GetMeleeAutoForward();
+        return Vector3.Angle(forward, toEnemy.normalized) <= angleLimit;
     }
 
     float ApplyMeleeCriticalDamage(PlayerMeleeData meleeData, Enemy enemy, float damage, out bool isCritical)
@@ -1268,6 +1358,18 @@ public class PlayerMeleeController : MonoBehaviour
         {
             forward = transform.forward;
             forward.y = 0f;
+        }
+
+        return forward.normalized;
+    }
+
+    Vector3 GetMeleeAutoForward()
+    {
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            return GetMeleeForward();
         }
 
         return forward.normalized;
