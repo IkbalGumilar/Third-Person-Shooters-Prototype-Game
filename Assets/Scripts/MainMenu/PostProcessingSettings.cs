@@ -19,6 +19,11 @@ public sealed class PostProcessingSettings : MonoBehaviour
     [SerializeField] private Toggle dofToggle;
     [SerializeField] private Toggle chromaticAberrationToggle;
     [SerializeField] private Toggle filmGrainToggle;
+    [SerializeField] private Slider bloomSlider;
+    [SerializeField] private Slider motionBlurSlider;
+    [SerializeField] private Slider dofSlider;
+    [SerializeField] private Slider chromaticAberrationSlider;
+    [SerializeField] private Slider filmGrainSlider;
 
     private readonly Dictionary<string, bool> defaultStates = new();
     private bool initialized;
@@ -30,12 +35,24 @@ public sealed class PostProcessingSettings : MonoBehaviour
 
     public void ConfigureForOptions(Component volume, Toggle bloom, Toggle motionBlur, Toggle depthOfField, Toggle chromaticAberration, Toggle filmGrain)
     {
+        ConfigureForOptions(volume, bloom, motionBlur, depthOfField, chromaticAberration, filmGrain, null, null, null, null, null);
+    }
+
+    public void ConfigureForOptions(Component volume, Toggle bloom, Toggle motionBlur, Toggle depthOfField, Toggle chromaticAberration, Toggle filmGrain,
+        Slider bloomControl, Slider motionBlurControl, Slider depthOfFieldControl, Slider chromaticAberrationControl, Slider filmGrainControl)
+    {
         postProcessingVolume = volume;
         bloomToggle = bloom;
         motionBlurToggle = motionBlur;
         dofToggle = depthOfField;
         chromaticAberrationToggle = chromaticAberration;
         filmGrainToggle = filmGrain;
+        bloomSlider = bloomControl;
+        motionBlurSlider = motionBlurControl;
+        dofSlider = depthOfFieldControl;
+        chromaticAberrationSlider = chromaticAberrationControl;
+        filmGrainSlider = filmGrainControl;
+        initialized = false;
         Initialize();
     }
 
@@ -53,11 +70,11 @@ public sealed class PostProcessingSettings : MonoBehaviour
 
     public void ApplySettings()
     {
-        ApplyOverride(bloomToggle, BloomKey, "Bloom");
-        ApplyOverride(motionBlurToggle, MotionBlurKey, "MotionBlur");
-        ApplyOverride(dofToggle, DepthOfFieldKey, "DepthOfField");
-        ApplyOverride(chromaticAberrationToggle, ChromaticAberrationKey, "ChromaticAberration");
-        ApplyOverride(filmGrainToggle, FilmGrainKey, "FilmGrain", "Grain");
+        ApplyOverride(bloomToggle, bloomSlider, BloomKey, "Bloom");
+        ApplyOverride(motionBlurToggle, motionBlurSlider, MotionBlurKey, "MotionBlur");
+        ApplyOverride(dofToggle, dofSlider, DepthOfFieldKey, "DepthOfField");
+        ApplyOverride(chromaticAberrationToggle, chromaticAberrationSlider, ChromaticAberrationKey, "ChromaticAberration");
+        ApplyOverride(filmGrainToggle, filmGrainSlider, FilmGrainKey, "FilmGrain", "Grain");
         PlayerPrefs.Save();
     }
 
@@ -71,16 +88,16 @@ public sealed class PostProcessingSettings : MonoBehaviour
 
     private void RestoreSavedValues()
     {
-        RestoreToggle(bloomToggle, BloomKey, "Bloom");
-        RestoreToggle(motionBlurToggle, MotionBlurKey, "MotionBlur");
-        RestoreToggle(dofToggle, DepthOfFieldKey, "DepthOfField");
-        RestoreToggle(chromaticAberrationToggle, ChromaticAberrationKey, "ChromaticAberration");
-        RestoreToggle(filmGrainToggle, FilmGrainKey, "FilmGrain", "Grain");
+        RestoreControl(bloomToggle, bloomSlider, BloomKey, "Bloom");
+        RestoreControl(motionBlurToggle, motionBlurSlider, MotionBlurKey, "MotionBlur");
+        RestoreControl(dofToggle, dofSlider, DepthOfFieldKey, "DepthOfField");
+        RestoreControl(chromaticAberrationToggle, chromaticAberrationSlider, ChromaticAberrationKey, "ChromaticAberration");
+        RestoreControl(filmGrainToggle, filmGrainSlider, FilmGrainKey, "FilmGrain", "Grain");
     }
 
-    private void RestoreToggle(Toggle toggle, string preferenceKey, params string[] componentNames)
+    private void RestoreControl(Toggle toggle, Slider slider, string preferenceKey, params string[] componentNames)
     {
-        if (toggle == null)
+        if (toggle == null && slider == null)
         {
             return;
         }
@@ -94,24 +111,37 @@ public sealed class PostProcessingSettings : MonoBehaviour
                 break;
             }
         }
-        toggle.SetIsOnWithoutNotify(PlayerPrefs.GetInt(preferenceKey, defaultState ? 1 : 0) == 1);
+        bool active = PlayerPrefs.GetInt(preferenceKey, defaultState ? 1 : 0) == 1;
+        if (toggle != null)
+        {
+            toggle.SetIsOnWithoutNotify(active);
+        }
+
+        if (slider != null)
+        {
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = true;
+            slider.SetValueWithoutNotify(active ? 0f : 1f);
+        }
     }
 
-    private void ApplyOverride(Toggle toggle, string preferenceKey, params string[] componentNames)
+    private void ApplyOverride(Toggle toggle, Slider slider, string preferenceKey, params string[] componentNames)
     {
-        if (toggle == null)
+        if (toggle == null && slider == null)
         {
             return;
         }
 
-        PlayerPrefs.SetInt(preferenceKey, toggle.isOn ? 1 : 0);
+        bool active = slider != null ? slider.value < 0.5f : toggle.isOn;
+        PlayerPrefs.SetInt(preferenceKey, active ? 1 : 0);
         foreach (object component in GetPostProcessingComponents())
         {
             for (int i = 0; i < componentNames.Length; i++)
             {
                 if (component.GetType().Name == componentNames[i])
                 {
-                    SetComponentActive(component, toggle.isOn);
+                    SetComponentActive(component, active);
                     return;
                 }
             }

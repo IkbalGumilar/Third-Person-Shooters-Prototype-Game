@@ -23,6 +23,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     [SerializeField] private TMP_Dropdown textureDropdown;
     [SerializeField] private Toggle vSyncToggle;
     [SerializeField] private Toggle fullscreenToggle;
+    [SerializeField] private Slider vSyncSlider;
+    [SerializeField] private Slider fullscreenSlider;
     [SerializeField] private Toggle motionBlurToggle;
     [SerializeField] private Slider fovSlider;
     [SerializeField] private Component postProcessingVolume;
@@ -37,6 +39,12 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
     public void ConfigureForOptions(TMP_Dropdown resolution, TMP_Dropdown quality, TMP_Dropdown shadows, TMP_Dropdown antiAliasing, TMP_Dropdown textures, Toggle vSync, Toggle fullscreen, Slider fov)
     {
+        ConfigureForOptions(resolution, quality, shadows, antiAliasing, textures, vSync, fullscreen, fov, null, null);
+    }
+
+    public void ConfigureForOptions(TMP_Dropdown resolution, TMP_Dropdown quality, TMP_Dropdown shadows, TMP_Dropdown antiAliasing, TMP_Dropdown textures,
+        Toggle vSync, Toggle fullscreen, Slider fov, Slider vSyncControl, Slider fullscreenControl)
+    {
         resolutionDropdown = resolution;
         graphicsDropdown = quality;
         shadowDropdown = shadows;
@@ -45,6 +53,9 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         vSyncToggle = vSync;
         fullscreenToggle = fullscreen;
         fovSlider = fov;
+        vSyncSlider = vSyncControl;
+        fullscreenSlider = fullscreenControl;
+        initialized = false;
         Initialize();
     }
 
@@ -95,16 +106,18 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             PlayerPrefs.SetInt(TextureKey, textureDropdown.value);
         }
 
-        if (vSyncToggle != null)
+        if (vSyncToggle != null || vSyncSlider != null)
         {
-            QualitySettings.vSyncCount = vSyncToggle.isOn ? 1 : 0;
-            PlayerPrefs.SetInt(VSyncKey, vSyncToggle.isOn ? 1 : 0);
+            bool active = GetBinaryControlValue(vSyncToggle, vSyncSlider);
+            QualitySettings.vSyncCount = active ? 1 : 0;
+            PlayerPrefs.SetInt(VSyncKey, active ? 1 : 0);
         }
 
-        if (fullscreenToggle != null)
+        if (fullscreenToggle != null || fullscreenSlider != null)
         {
-            Screen.fullScreenMode = fullscreenToggle.isOn ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
-            PlayerPrefs.SetInt(FullscreenKey, fullscreenToggle.isOn ? 1 : 0);
+            bool active = GetBinaryControlValue(fullscreenToggle, fullscreenSlider);
+            Screen.fullScreenMode = active ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+            PlayerPrefs.SetInt(FullscreenKey, active ? 1 : 0);
         }
 
         if (fovSlider != null)
@@ -245,10 +258,14 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             vSyncToggle.SetIsOnWithoutNotify(PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
         }
 
+        SetBinarySliderValue(vSyncSlider, PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
+
         if (fullscreenToggle != null)
         {
             fullscreenToggle.SetIsOnWithoutNotify(PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
         }
+
+        SetBinarySliderValue(fullscreenSlider, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
 
         if (fovSlider != null)
         {
@@ -271,8 +288,32 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         int index = Mathf.Clamp(resolutionDropdown.value, 0, availableResolutions.Count - 1);
         Resolution resolution = availableResolutions[index];
-        Screen.SetResolution(resolution.width, resolution.height, Screen.fullScreenMode, resolution.refreshRateRatio);
+        FullScreenMode mode = GetBinaryControlValue(fullscreenToggle, fullscreenSlider) ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+        Screen.SetResolution(resolution.width, resolution.height, mode, resolution.refreshRateRatio);
         PlayerPrefs.SetInt(ResolutionKey, index);
+    }
+
+    private static bool GetBinaryControlValue(Toggle toggle, Slider slider)
+    {
+        if (slider != null)
+        {
+            return slider.value < 0.5f;
+        }
+
+        return toggle != null && toggle.isOn;
+    }
+
+    private static void SetBinarySliderValue(Slider slider, bool active)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = true;
+        slider.SetValueWithoutNotify(active ? 0f : 1f);
     }
 
     private int FindCurrentResolutionIndex()

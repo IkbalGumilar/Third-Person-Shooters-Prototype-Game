@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +12,15 @@ using UnityEngine.UI;
 /// <summary>Runtime controller for the Options canvas in MainScene.</summary>
 public sealed class InGameOptionsMenu : MonoBehaviour
 {
+    [Serializable]
+    private sealed class OptionInformationEntry
+    {
+        public string targetName;
+        public string title;
+        [TextArea(2, 5)] public string information;
+        public Sprite logo;
+    }
+
     private static InGameOptionsMenu instance;
     private static bool inputBlocked;
 
@@ -49,6 +59,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private TMP_Dropdown textureDropdown;
     private Toggle vSyncToggle;
     private Toggle fullscreenToggle;
+    private Slider vSyncSlider;
+    private Slider fullscreenSlider;
     private Slider cameraSensitivitySlider;
     private Slider aimSensitivitySlider;
     private Toggle bloomToggle;
@@ -56,7 +68,16 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private Toggle depthOfFieldToggle;
     private Toggle chromaticToggle;
     private Toggle filmGrainToggle;
+    private Slider bloomSlider;
+    private Slider motionBlurSlider;
+    private Slider depthOfFieldSlider;
+    private Slider chromaticSlider;
+    private Slider filmGrainSlider;
     private Button applyButton;
+    private TMP_Text selectedOptionTitleText;
+    private TMP_Text selectedOptionInfoText;
+    [SerializeField] private Image selectedOptionLogoImage;
+    [SerializeField] private OptionInformationEntry[] optionInformationEntries;
     private GameObject confirmationPanel;
     private GameObject mainMenuBlurOverlay;
     private Material mainMenuBlurMaterial;
@@ -64,6 +85,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private Image applyImage;
     private GraphicsSettingsManager sharedGraphicsSettings;
     private PostProcessingSettings sharedPostProcessingSettings;
+    private ResourceUsageDisplay resourceUsageDisplay;
     private Color applyDefaultColor;
     private readonly List<Resolution> resolutions = new();
     private readonly Dictionary<RectTransform, Vector3> optionChildOpenScales = new();
@@ -213,12 +235,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             return;
         }
 
+        CopySceneInspectorConfiguration();
         BindControls();
         ResolvePlayerControlReferences();
         SubscribePlayerHealth();
         ConfigureControls();
         AttachSharedSettingsControllers();
         RegisterListeners();
+        RegisterOptionInformationTargets();
         CreateConfirmationDialog();
         CacheOptionAnimationState();
         SetOptionPanelImmediate(false);
@@ -226,21 +250,34 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void BindControls()
     {
-        resolutionDropdown = FindComponent<TMP_Dropdown>("Resolusi");
-        qualityDropdown = FindComponent<TMP_Dropdown>("Grafik Quality");
-        shadowDropdown = FindComponent<TMP_Dropdown>("Shadow");
-        antiAliasingDropdown = FindComponent<TMP_Dropdown>("Anti-Aliasing");
-        textureDropdown = FindComponent<TMP_Dropdown>("TextureQuality");
-        vSyncToggle = FindComponent<Toggle>("V-Sync");
-        fullscreenToggle = FindComponent<Toggle>("FullScreenMode");
-        cameraSensitivitySlider = FindComponentUnder<Slider>("Sensitivity");
-        aimSensitivitySlider = FindComponentUnder<Slider>("Sensitivity aim");
-        bloomToggle = FindComponent<Toggle>("Bloom");
-        motionBlurToggle = FindComponent<Toggle>("MotionBlur");
-        depthOfFieldToggle = FindComponent<Toggle>("DepthOfField");
-        chromaticToggle = FindComponent<Toggle>("Chromatic");
-        filmGrainToggle = FindComponent<Toggle>("FilmGrain");
-        applyButton = FindComponent<Button>("Apply");
+        resolutionDropdown = FindComponentOrChild<TMP_Dropdown>("Resolusi", "Resolution", "Resolution text");
+        qualityDropdown = FindComponentOrChild<TMP_Dropdown>("Grafik Quality", "Quality", "Quality Preset", "Quality Preset text");
+        shadowDropdown = FindComponentOrChild<TMP_Dropdown>("Shadow", "Shadow Quality", "Shadow Quality text");
+        antiAliasingDropdown = FindComponentOrChild<TMP_Dropdown>("Anti-Aliasing", "Anti-Aliasing text");
+        textureDropdown = FindComponentOrChild<TMP_Dropdown>("TextureQuality", "Texture Quality", "Texture Quality text");
+        vSyncToggle = FindComponentOrChild<Toggle>("V-Sync", "VSync");
+        fullscreenToggle = FindComponentOrChild<Toggle>("FullScreenMode", "Full screen", "Fullscreen");
+        vSyncSlider = FindComponentOrChild<Slider>("V-Sync", "VSync");
+        fullscreenSlider = FindComponentOrChild<Slider>("FullScreenMode", "Full screen", "Fullscreen");
+        cameraSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity", "Camera Sensitivity", "Mouse Sensitivity");
+        aimSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity aim", "Aim Sensitivity");
+        bloomToggle = FindComponentOrChild<Toggle>("Bloom");
+        motionBlurToggle = FindComponentOrChild<Toggle>("MotionBlur", "Motion Blur");
+        depthOfFieldToggle = FindComponentOrChild<Toggle>("DepthOfField", "Depth Of Field", "DOF");
+        chromaticToggle = FindComponentOrChild<Toggle>("Chromatic", "Chromatic Aberration");
+        filmGrainToggle = FindComponentOrChild<Toggle>("FilmGrain", "Film Grain", "Film Gain");
+        bloomSlider = FindComponentOrChild<Slider>("Bloom");
+        motionBlurSlider = FindComponentOrChild<Slider>("MotionBlur", "Motion Blur");
+        depthOfFieldSlider = FindComponentOrChild<Slider>("DepthOfField", "Depth Of Field", "DOF");
+        chromaticSlider = FindComponentOrChild<Slider>("Chromatic", "Chromatic Aberration");
+        filmGrainSlider = FindComponentOrChild<Slider>("FilmGrain", "Film Grain", "Film Gain");
+        applyButton = FindComponentOrChild<Button>("Apply");
+        selectedOptionTitleText = FindComponentOrChild<TMP_Text>("Select Text");
+        selectedOptionInfoText = FindComponentOrChild<TMP_Text>("Information Text");
+        if (selectedOptionLogoImage == null)
+        {
+            selectedOptionLogoImage = FindInformationLogoImage();
+        }
 
         if (applyButton != null)
         {
@@ -260,8 +297,15 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         PopulateDropdown(shadowDropdown, new List<string> { "Off", "Hard Shadows", "All Shadows" });
         PopulateDropdown(antiAliasingDropdown, AntiAliasingSettingsUtility.GetOptionLabels());
         PopulateDropdown(textureDropdown, new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
+        ConfigurePostProcessingSlider(vSyncSlider);
+        ConfigurePostProcessingSlider(fullscreenSlider);
         ConfigureSensitivitySlider(cameraSensitivitySlider);
         ConfigureSensitivitySlider(aimSensitivitySlider);
+        ConfigurePostProcessingSlider(bloomSlider);
+        ConfigurePostProcessingSlider(motionBlurSlider);
+        ConfigurePostProcessingSlider(depthOfFieldSlider);
+        ConfigurePostProcessingSlider(chromaticSlider);
+        ConfigurePostProcessingSlider(filmGrainSlider);
         LoadAppliedValues();
         suppressChangeDetection = false;
         SetPendingChanges(false);
@@ -275,7 +319,16 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             sharedGraphicsSettings = optionPanel.AddComponent<GraphicsSettingsManager>();
         }
 
-        sharedGraphicsSettings.ConfigureForOptions(resolutionDropdown, qualityDropdown, shadowDropdown, antiAliasingDropdown, textureDropdown, vSyncToggle, fullscreenToggle, null);
+        sharedGraphicsSettings.ConfigureForOptions(resolutionDropdown, qualityDropdown, shadowDropdown, antiAliasingDropdown, textureDropdown,
+            vSyncToggle, fullscreenToggle, null, vSyncSlider, fullscreenSlider);
+
+        resourceUsageDisplay = optionPanel.GetComponent<ResourceUsageDisplay>();
+        if (resourceUsageDisplay == null)
+        {
+            resourceUsageDisplay = optionPanel.AddComponent<ResourceUsageDisplay>();
+        }
+
+        resourceUsageDisplay.BindFrom(optionPanel.transform);
 
         sharedPostProcessingSettings = optionPanel.GetComponent<PostProcessingSettings>();
         if (sharedPostProcessingSettings == null)
@@ -290,7 +343,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             break;
         }
 
-        sharedPostProcessingSettings.ConfigureForOptions(volume, bloomToggle, motionBlurToggle, depthOfFieldToggle, chromaticToggle, filmGrainToggle);
+        sharedPostProcessingSettings.ConfigureForOptions(volume, bloomToggle, motionBlurToggle, depthOfFieldToggle, chromaticToggle, filmGrainToggle,
+            bloomSlider, motionBlurSlider, depthOfFieldSlider, chromaticSlider, filmGrainSlider);
     }
 
     private void RegisterListeners()
@@ -302,6 +356,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterChangeListener(textureDropdown);
         RegisterChangeListener(vSyncToggle);
         RegisterChangeListener(fullscreenToggle);
+        RegisterPostProcessingSlider(vSyncSlider);
+        RegisterPostProcessingSlider(fullscreenSlider);
         RegisterInstantSensitivityListener(cameraSensitivitySlider);
         RegisterInstantSensitivityListener(aimSensitivitySlider);
         RegisterChangeListener(bloomToggle);
@@ -309,8 +365,13 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterChangeListener(depthOfFieldToggle);
         RegisterChangeListener(chromaticToggle);
         RegisterChangeListener(filmGrainToggle);
+        RegisterPostProcessingSlider(bloomSlider);
+        RegisterPostProcessingSlider(motionBlurSlider);
+        RegisterPostProcessingSlider(depthOfFieldSlider);
+        RegisterPostProcessingSlider(chromaticSlider);
+        RegisterPostProcessingSlider(filmGrainSlider);
 
-        Button resumeButton = FindComponent<Button>("Resume");
+        Button resumeButton = FindComponentOrChild<Button>("Resume", "Back");
         if (resumeButton != null)
         {
             resumeButton.onClick.RemoveAllListeners();
@@ -330,11 +391,140 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             defaultButton.onClick.AddListener(ResetSensitivityToDefault);
         }
 
-        Button mainMenuButton = FindComponent<Button>("Main Menu");
+        Button mainMenuButton = FindComponentOrChild<Button>("Main Menu", "MainMenu");
         if (mainMenuButton != null)
         {
             mainMenuButton.onClick.RemoveAllListeners();
             mainMenuButton.onClick.AddListener(RequestReturnToMainMenu);
+        }
+    }
+
+    private void RegisterOptionInformationTargets()
+    {
+        SetSelectedOptionInfo("Graphics", "Select a graphics setting to see what it changes.", null);
+
+        if (optionInformationEntries != null && optionInformationEntries.Length > 0)
+        {
+            for (int i = 0; i < optionInformationEntries.Length; i++)
+            {
+                OptionInformationEntry entry = optionInformationEntries[i];
+                if (entry != null && !string.IsNullOrWhiteSpace(entry.targetName))
+                {
+                    RegisterInfoTarget(entry.targetName, entry.title, entry.information, entry.logo);
+                }
+            }
+
+            return;
+        }
+
+        RegisterDefaultInfoTargets();
+    }
+
+    private void RegisterDefaultInfoTargets()
+    {
+        RegisterInfoTarget("Line Display", "Display", "Screen output settings such as resolution, fullscreen mode, and V-Sync.", null);
+        RegisterInfoTarget("Resolution text", "Resolution", "Changes the game output resolution. Higher resolutions look sharper but cost more GPU performance.", null);
+        RegisterInfoTarget("Full screen", "Full Screen", "Switches between fullscreen window mode and windowed mode. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("V-Sync", "V-Sync", "Synchronizes rendering with the display refresh rate to reduce tearing. Slider value 0 is On, 1 is Off.", null);
+
+        RegisterInfoTarget("Line Quality", "Quality", "Rendering quality settings that affect visual detail and performance.", null);
+        RegisterInfoTarget("Quality Preset text", "Quality Preset", "Applies one of Unity's project quality presets.", null);
+        RegisterInfoTarget("Texture Quality text", "Texture Quality", "Controls texture mipmap quality. Lower settings reduce memory usage and texture sharpness.", null);
+        RegisterInfoTarget("Shadow Quality text", "Shadow Quality", "Controls shadow rendering. Higher shadow quality improves depth but costs GPU performance.", null);
+        RegisterInfoTarget("Anti-Aliasing text", "Anti-Aliasing", "Reduces jagged edges. Unsupported methods will fall back to a supported option.", null);
+
+        RegisterInfoTarget("Line Post Prosesing", "Post Processing", "Camera effects that change the final rendered image.", null);
+        RegisterInfoTarget("Bloom", "Bloom", "Adds glow around bright areas. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("Motion Blur", "Motion Blur", "Blends fast camera or object movement to create a smoother motion look. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("DOF", "Depth Of Field", "Blurs areas outside the focus range for a camera lens effect. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("Chromatic", "Chromatic Aberration", "Adds subtle color fringing near image edges. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("Film Gain", "Film Grain", "Adds a grain/noise overlay for a cinematic texture. Slider value 0 is On, 1 is Off.", null);
+    }
+
+    private void RegisterInfoTarget(string objectName, string title, string info, Sprite logo)
+    {
+        Transform target = FindTransform(objectName);
+        if (target == null)
+        {
+            return;
+        }
+
+        AddInfoClick(target, title, info, logo);
+        foreach (Selectable selectable in target.GetComponentsInChildren<Selectable>(true))
+        {
+            AddInfoClick(selectable.transform, title, info, logo);
+        }
+    }
+
+    private void CopySceneInspectorConfiguration()
+    {
+        foreach (InGameOptionsMenu controller in Resources.FindObjectsOfTypeAll<InGameOptionsMenu>())
+        {
+            if (controller == null || controller == this || !controller.gameObject.scene.IsValid() || controller.gameObject.scene != SceneManager.GetActiveScene())
+            {
+                continue;
+            }
+
+            if (selectedOptionLogoImage == null && controller.selectedOptionLogoImage != null)
+            {
+                selectedOptionLogoImage = controller.selectedOptionLogoImage;
+            }
+
+            if ((optionInformationEntries == null || optionInformationEntries.Length == 0) && controller.optionInformationEntries != null && controller.optionInformationEntries.Length > 0)
+            {
+                optionInformationEntries = controller.optionInformationEntries;
+            }
+        }
+    }
+
+    private void AddInfoClick(Transform target, string title, string info, Sprite logo)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        EventTrigger trigger = target.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = target.gameObject.AddComponent<EventTrigger>();
+        }
+
+        EventTrigger.Entry clickEntry = null;
+        for (int i = 0; i < trigger.triggers.Count; i++)
+        {
+            if (trigger.triggers[i].eventID == EventTriggerType.PointerClick)
+            {
+                clickEntry = trigger.triggers[i];
+                break;
+            }
+        }
+
+        if (clickEntry == null)
+        {
+            clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            trigger.triggers.Add(clickEntry);
+        }
+
+        clickEntry.callback.AddListener(_ => SetSelectedOptionInfo(title, info, logo));
+    }
+
+    private void SetSelectedOptionInfo(string title, string info, Sprite logo)
+    {
+        if (selectedOptionTitleText != null)
+        {
+            selectedOptionTitleText.text = title;
+        }
+
+        if (selectedOptionInfoText != null)
+        {
+            selectedOptionInfoText.text = info;
+        }
+
+        if (selectedOptionLogoImage != null && logo != null)
+        {
+            selectedOptionLogoImage.sprite = logo;
+            selectedOptionLogoImage.enabled = true;
         }
     }
 
@@ -914,7 +1104,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             int index = Mathf.Clamp(resolutionDropdown.value, 0, resolutions.Count - 1);
             Resolution resolution = resolutions[index];
-            FullScreenMode mode = fullscreenToggle != null && fullscreenToggle.isOn ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+            FullScreenMode mode = GetPostProcessingControlValue(fullscreenToggle, fullscreenSlider) ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
             Screen.SetResolution(resolution.width, resolution.height, mode, resolution.refreshRateRatio);
             PlayerPrefs.SetInt(ResolutionKey, index);
         }
@@ -945,15 +1135,16 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             PlayerPrefs.SetInt(TextureKey, textureDropdown.value);
         }
 
-        if (vSyncToggle != null)
+        if (vSyncToggle != null || vSyncSlider != null)
         {
-            QualitySettings.vSyncCount = vSyncToggle.isOn ? 1 : 0;
-            PlayerPrefs.SetInt(VSyncKey, vSyncToggle.isOn ? 1 : 0);
+            bool vSyncActive = GetPostProcessingControlValue(vSyncToggle, vSyncSlider);
+            QualitySettings.vSyncCount = vSyncActive ? 1 : 0;
+            PlayerPrefs.SetInt(VSyncKey, vSyncActive ? 1 : 0);
         }
 
-        if (fullscreenToggle != null)
+        if (fullscreenToggle != null || fullscreenSlider != null)
         {
-            PlayerPrefs.SetInt(FullscreenKey, fullscreenToggle.isOn ? 1 : 0);
+            PlayerPrefs.SetInt(FullscreenKey, GetPostProcessingControlValue(fullscreenToggle, fullscreenSlider) ? 1 : 0);
         }
 
     }
@@ -985,6 +1176,18 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         slider.wholeNumbers = false;
     }
 
+    private static void ConfigurePostProcessingSlider(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = true;
+    }
+
     private static float GetSensitivityValue(Slider slider)
     {
         return slider == null ? 1f : Mathf.Clamp(slider.value, 0.1f, 5f);
@@ -998,6 +1201,24 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
     }
 
+    private static bool GetPostProcessingControlValue(Toggle toggle, Slider slider)
+    {
+        if (slider != null)
+        {
+            return slider.value < 0.5f;
+        }
+
+        return toggle != null && toggle.isOn;
+    }
+
+    private static void SetPostProcessingSliderValue(Slider slider, bool active)
+    {
+        if (slider != null)
+        {
+            slider.SetValueWithoutNotify(active ? 0f : 1f);
+        }
+    }
+
     private void ApplyPostProcessingSettings()
     {
         if (sharedPostProcessingSettings != null)
@@ -1005,21 +1226,22 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             sharedPostProcessingSettings.ApplySettings();
             return;
         }
-        ApplyEffect("Bloom", bloomToggle, BloomKey);
-        ApplyEffect("MotionBlur", motionBlurToggle, MotionBlurKey);
-        ApplyEffect("DepthOfField", depthOfFieldToggle, DepthOfFieldKey);
-        ApplyEffect("ChromaticAberration", chromaticToggle, ChromaticAberrationKey);
-        ApplyEffect("FilmGrain", filmGrainToggle, FilmGrainKey, "Grain");
+        ApplyEffect("Bloom", bloomToggle, bloomSlider, BloomKey);
+        ApplyEffect("MotionBlur", motionBlurToggle, motionBlurSlider, MotionBlurKey);
+        ApplyEffect("DepthOfField", depthOfFieldToggle, depthOfFieldSlider, DepthOfFieldKey);
+        ApplyEffect("ChromaticAberration", chromaticToggle, chromaticSlider, ChromaticAberrationKey);
+        ApplyEffect("FilmGrain", filmGrainToggle, filmGrainSlider, FilmGrainKey, "Grain");
     }
 
-    private void ApplyEffect(string primaryName, Toggle toggle, string preferenceKey, string alternateName = null)
+    private void ApplyEffect(string primaryName, Toggle toggle, Slider slider, string preferenceKey, string alternateName = null)
     {
-        if (toggle == null)
+        if (toggle == null && slider == null)
         {
             return;
         }
 
-        PlayerPrefs.SetInt(preferenceKey, toggle.isOn ? 1 : 0);
+        bool active = GetPostProcessingControlValue(toggle, slider);
+        PlayerPrefs.SetInt(preferenceKey, active ? 1 : 0);
         foreach (Component volume in FindVolumeComponents())
         {
             object profile = ReadMember(volume, "profile") ?? ReadMember(volume, "sharedProfile");
@@ -1034,7 +1256,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 string typeName = effect.GetType().Name;
                 if (typeName == primaryName || typeName == alternateName)
                 {
-                    SetMember(effect, "active", toggle.isOn);
+                    SetMember(effect, "active", active);
                 }
             }
         }
@@ -1051,6 +1273,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetDropdownValue(textureDropdown, PlayerPrefs.GetInt(TextureKey, QualitySettings.globalTextureMipmapLimit));
         SetToggleValue(vSyncToggle, PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
         SetToggleValue(fullscreenToggle, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
+        SetPostProcessingSliderValue(vSyncSlider, PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
+        SetPostProcessingSliderValue(fullscreenSlider, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
 
         SetSensitivityValue(cameraSensitivitySlider, PlayerPrefs.GetFloat(CameraSensitivityKey, DefaultCameraSensitivity));
         SetSensitivityValue(aimSensitivitySlider, PlayerPrefs.GetFloat(AimSensitivityKey, DefaultAimSensitivity));
@@ -1061,6 +1285,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetToggleValue(depthOfFieldToggle, PlayerPrefs.GetInt(DepthOfFieldKey, 1) == 1);
         SetToggleValue(chromaticToggle, PlayerPrefs.GetInt(ChromaticAberrationKey, 1) == 1);
         SetToggleValue(filmGrainToggle, PlayerPrefs.GetInt(FilmGrainKey, 1) == 1);
+        SetPostProcessingSliderValue(bloomSlider, PlayerPrefs.GetInt(BloomKey, 1) == 1);
+        SetPostProcessingSliderValue(motionBlurSlider, PlayerPrefs.GetInt(MotionBlurKey, 1) == 1);
+        SetPostProcessingSliderValue(depthOfFieldSlider, PlayerPrefs.GetInt(DepthOfFieldKey, 1) == 1);
+        SetPostProcessingSliderValue(chromaticSlider, PlayerPrefs.GetInt(ChromaticAberrationKey, 1) == 1);
+        SetPostProcessingSliderValue(filmGrainSlider, PlayerPrefs.GetInt(FilmGrainKey, 1) == 1);
     }
 
     private void PopulateResolutions()
@@ -1130,6 +1359,55 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             slider.onValueChanged.RemoveAllListeners();
             slider.onValueChanged.AddListener(_ => NotifyChanged());
         }
+    }
+
+    private void RegisterPostProcessingSlider(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.onValueChanged.RemoveAllListeners();
+        slider.onValueChanged.AddListener(_ => NotifyChanged());
+
+        EventTrigger trigger = slider.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = slider.gameObject.AddComponent<EventTrigger>();
+        }
+
+        EventTrigger.Entry clickEntry = null;
+        for (int i = 0; i < trigger.triggers.Count; i++)
+        {
+            if (trigger.triggers[i].eventID == EventTriggerType.PointerClick)
+            {
+                clickEntry = trigger.triggers[i];
+                break;
+            }
+        }
+
+        if (clickEntry == null)
+        {
+            clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            trigger.triggers.Add(clickEntry);
+        }
+        else
+        {
+            clickEntry.callback.RemoveAllListeners();
+        }
+
+        clickEntry.callback.AddListener(_ => TogglePostProcessingSlider(slider));
+    }
+
+    private void TogglePostProcessingSlider(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.value = slider.value < 0.5f ? 1f : 0f;
     }
 
     private void RegisterInstantSensitivityListener(Slider slider)
@@ -1222,6 +1500,105 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 {
                     return component;
                 }
+            }
+        }
+
+        return null;
+    }
+
+    private T FindComponentOrChild<T>(params string[] objectNames) where T : Component
+    {
+        if (optionPanel == null || objectNames == null)
+        {
+            return null;
+        }
+
+        foreach (string objectName in objectNames)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                continue;
+            }
+
+            foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+            {
+                if (transform.name != objectName)
+                {
+                    continue;
+                }
+
+                T component = transform.GetComponent<T>();
+                if (component != null)
+                {
+                    return component;
+                }
+
+                component = transform.GetComponentInChildren<T>(true);
+                if (component != null)
+                {
+                    return component;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private Transform FindTransform(string objectName)
+    {
+        if (optionPanel == null || string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        Transform lineMatch = null;
+        Transform containsMatch = null;
+        foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+        {
+            if (transform.name == objectName)
+            {
+                return transform;
+            }
+
+            if (lineMatch == null && string.Equals(transform.name, "Line " + objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                lineMatch = transform;
+            }
+
+            if (containsMatch == null && transform.name.IndexOf(objectName, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                containsMatch = transform;
+            }
+        }
+
+        return lineMatch != null ? lineMatch : containsMatch;
+    }
+
+    private Image FindInformationLogoImage()
+    {
+        Transform imageRoot = FindDirectChild(optionPanel != null ? optionPanel.transform : null, "Image");
+        Transform icon = FindDirectChild(imageRoot, "Icon");
+        if (icon != null && icon.TryGetComponent(out Image image))
+        {
+            return image;
+        }
+
+        return FindComponentOrChild<Image>("Icon");
+    }
+
+    private static Transform FindDirectChild(Transform root, string childName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(childName))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == childName)
+            {
+                return child;
             }
         }
 
