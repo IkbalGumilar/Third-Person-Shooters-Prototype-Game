@@ -1,6 +1,8 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -26,6 +28,15 @@ public sealed class SceneChanger : MonoBehaviour
     [SerializeField, Range(0.1f, 1f)] private float quitButtonMaxParentWidthPercent = 0.85f;
     [SerializeField, Min(120f)] private float quitButtonMinimumWidth = 240f;
 
+    [Header("Finished Credits")]
+    [SerializeField] private GameObject creditPanel;
+    [SerializeField] private Button creditButton;
+    [SerializeField] private ScrollRect creditScrollRect;
+    [SerializeField] private TMP_Text creditBackText;
+    [SerializeField, Min(1f)] private float creditScrollDuration = 300f;
+    [SerializeField, Min(1f)] private float creditFastForwardMultiplier = 8f;
+    [SerializeField, Min(0f)] private float creditAutoCloseDelay = 5f;
+
     private GameObject selectMenuPanel;
     private GameObject loadingPanel;
     private CanvasGroup loadingCanvasGroup;
@@ -33,6 +44,8 @@ public sealed class SceneChanger : MonoBehaviour
     private TMP_Text loadingText;
     private Button[] menuButtons;
     private bool isLoading;
+    private bool creditFastForward;
+    private Coroutine creditRoutine;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeGameFinishedFlag()
@@ -64,9 +77,11 @@ public sealed class SceneChanger : MonoBehaviour
         }
 
         menuButtons = GetComponentsInChildren<Button>(true);
+        ResolveCreditMenu();
         ApplyFinishedMenuLayout();
 
         loadingPanel.SetActive(false);
+        SetCreditPanelVisible(false);
     }
 
     private void OnValidate()
@@ -110,6 +125,34 @@ public sealed class SceneChanger : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    public void OpenFinishedCredit()
+    {
+        if (isLoading || !IsGameFinishedForMenu() || creditPanel == null || creditScrollRect == null)
+        {
+            return;
+        }
+
+        if (creditRoutine != null)
+        {
+            StopCoroutine(creditRoutine);
+        }
+
+        creditRoutine = StartCoroutine(FinishedCreditRoutine());
+    }
+
+    public void CloseFinishedCredit()
+    {
+        if (creditRoutine != null)
+        {
+            StopCoroutine(creditRoutine);
+            creditRoutine = null;
+        }
+
+        creditFastForward = false;
+        SetCreditPanelVisible(false);
+        SetMenuButtonsInteractable(true);
     }
 
     private IEnumerator LoadMainGameRoutine()
@@ -163,6 +206,42 @@ public sealed class SceneChanger : MonoBehaviour
         operation.allowSceneActivation = true;
     }
 
+    private IEnumerator FinishedCreditRoutine()
+    {
+        creditFastForward = false;
+        SetCreditPanelVisible(true);
+        Canvas.ForceUpdateCanvases();
+        creditScrollRect.verticalNormalizedPosition = 1f;
+        yield return null;
+
+        float elapsed = 0f;
+        float duration = Mathf.Max(1f, creditScrollDuration);
+        while (elapsed < duration)
+        {
+            creditFastForward = IsAnyButtonPressed();
+            float speed = creditFastForward ? creditFastForwardMultiplier : 1f;
+            elapsed += Time.unscaledDeltaTime * Mathf.Max(0.01f, speed);
+            creditScrollRect.verticalNormalizedPosition = Mathf.Lerp(1f, 0f, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+
+        creditScrollRect.verticalNormalizedPosition = 0f;
+
+        float wait = 0f;
+        while (wait < creditAutoCloseDelay)
+        {
+            if (WasAnyButtonPressedThisFrame())
+            {
+                break;
+            }
+
+            wait += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        CloseFinishedCredit();
+    }
+
     private void ResolveMenuPanels()
     {
         Transform[] transforms = GetComponentsInChildren<Transform>(true);
@@ -193,6 +272,50 @@ public sealed class SceneChanger : MonoBehaviour
         loadingText = loadingPanel.GetComponentInChildren<TMP_Text>(true);
     }
 
+    private void ResolveCreditMenu()
+    {
+        if (creditPanel == null)
+        {
+            creditPanel = FindCreditPanel();
+        }
+
+        if (creditPanel != null && creditScrollRect == null)
+        {
+            creditScrollRect = creditPanel.GetComponentInChildren<ScrollRect>(true);
+        }
+
+        if (creditPanel != null && creditBackText == null)
+        {
+            creditBackText = FindCreditBackText(creditPanel.transform);
+        }
+
+        if (creditBackText != null)
+        {
+            creditBackText.raycastTarget = true;
+            Button backButton = creditBackText.GetComponent<Button>();
+            if (backButton == null)
+            {
+                backButton = creditBackText.gameObject.AddComponent<Button>();
+            }
+
+            backButton.onClick.RemoveListener(CloseFinishedCredit);
+            backButton.onClick.AddListener(CloseFinishedCredit);
+        }
+
+        if (creditButton == null)
+        {
+            creditButton = FindCreditMenuButton();
+        }
+
+        if (creditButton != null)
+        {
+            creditButton.onClick.RemoveListener(OpenFinishedCredit);
+            creditButton.onClick.AddListener(OpenFinishedCredit);
+        }
+
+        ApplyCreditButtonVisibility();
+    }
+
     private void ApplyFinishedMenuLayout()
     {
         if (quitButtonRect == null)
@@ -206,11 +329,12 @@ public sealed class SceneChanger : MonoBehaviour
         }
 
         Vector2 position = quitButtonRect.anchoredPosition;
-        position.y = (gameFinished || gameFinishedThisSession)
+        position.y = IsGameFinishedForMenu()
             ? finishedQuitButtonY
             : defaultQuitButtonY;
         quitButtonRect.anchoredPosition = position;
         ClampQuitButtonWidth();
+        ApplyCreditButtonVisibility();
     }
 
     private void ClampQuitButtonWidth()
@@ -244,6 +368,173 @@ public sealed class SceneChanger : MonoBehaviour
         {
             gameFinishedThisSession = false;
         }
+
+        ApplyCreditButtonVisibility();
+    }
+
+    private bool IsGameFinishedForMenu()
+    {
+        return gameFinished || gameFinishedThisSession;
+    }
+
+    private void ApplyCreditButtonVisibility()
+    {
+        if (creditButton != null)
+        {
+            creditButton.gameObject.SetActive(IsGameFinishedForMenu());
+        }
+    }
+
+    private void SetCreditPanelVisible(bool visible)
+    {
+        if (creditPanel != null)
+        {
+            creditPanel.SetActive(visible);
+        }
+
+        if (selectMenuPanel != null)
+        {
+            selectMenuPanel.SetActive(!visible);
+        }
+    }
+
+    private static GameObject FindCreditPanel()
+    {
+        GameObject[] objects = Resources.FindObjectsOfTypeAll<GameObject>();
+        Scene activeScene = SceneManager.GetActiveScene();
+        for (int i = 0; i < objects.Length; i++)
+        {
+            GameObject candidate = objects[i];
+            if (candidate == null
+                || candidate.name != "Credit"
+                || !candidate.scene.IsValid()
+                || candidate.scene != activeScene
+                || candidate.GetComponentInChildren<ScrollRect>(true) == null)
+            {
+                continue;
+            }
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private static Button FindCreditMenuButton()
+    {
+        Button[] buttons = Resources.FindObjectsOfTypeAll<Button>();
+        Scene activeScene = SceneManager.GetActiveScene();
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button candidate = buttons[i];
+            if (candidate == null
+                || !candidate.gameObject.scene.IsValid()
+                || candidate.gameObject.scene != activeScene
+                || candidate.GetComponentInChildren<ScrollRect>(true) != null)
+            {
+                continue;
+            }
+
+            TMP_Text label = candidate.GetComponentInChildren<TMP_Text>(true);
+            string labelText = label != null ? label.text.Trim() : string.Empty;
+            if (candidate.name == "Credit" || labelText == "Credit")
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static TMP_Text FindCreditBackText(Transform root)
+    {
+        TMP_Text[] texts = root.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text candidate = texts[i];
+            string text = candidate.text.Trim();
+            if (text == "Kembali"
+                || text == "Back"
+                || candidate.name == "Kembali"
+                || candidate.name == "Back")
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool WasAnyButtonPressedThisFrame()
+    {
+        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
+        {
+            return true;
+        }
+
+        if (Mouse.current != null
+            && (Mouse.current.leftButton.wasPressedThisFrame
+                || Mouse.current.rightButton.wasPressedThisFrame
+                || Mouse.current.middleButton.wasPressedThisFrame))
+        {
+            return true;
+        }
+
+        return WasButtonPressed(Gamepad.current) || WasButtonPressed(Joystick.current);
+    }
+
+    private static bool IsAnyButtonPressed()
+    {
+        if (Keyboard.current != null && Keyboard.current.anyKey.isPressed)
+        {
+            return true;
+        }
+
+        if (Mouse.current != null
+            && (Mouse.current.leftButton.isPressed
+                || Mouse.current.rightButton.isPressed
+                || Mouse.current.middleButton.isPressed))
+        {
+            return true;
+        }
+
+        return IsButtonPressed(Gamepad.current) || IsButtonPressed(Joystick.current);
+    }
+
+    private static bool WasButtonPressed(InputDevice device)
+    {
+        if (device == null)
+        {
+            return false;
+        }
+
+        foreach (InputControl control in device.allControls)
+        {
+            if (control is ButtonControl button && button.wasPressedThisFrame)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsButtonPressed(InputDevice device)
+    {
+        if (device == null)
+        {
+            return false;
+        }
+
+        foreach (InputControl control in device.allControls)
+        {
+            if (control is ButtonControl button && button.isPressed)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static RectTransform FindSceneRectTransform(string objectName)
