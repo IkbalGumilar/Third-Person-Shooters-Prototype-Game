@@ -74,6 +74,14 @@ public class Enemy : MonoBehaviour
     private EnemyDeathRitual deathRitual;
     private Coroutine deathRoutine;
     private bool deathFinalized;
+    private bool stealthTargetLocked;
+    private bool previousStealthAIEnabled;
+    private bool previousStealthMeleeEnabled;
+    private bool previousStealthRangedEnabled;
+    private bool previousStealthAgentStopped;
+    private bool previousStealthAgentHadState;
+    private bool stealthKillPending;
+    private UnityEngine.AI.NavMeshAgent stealthLockedAgent;
 
     void Awake()
     {
@@ -116,6 +124,9 @@ public class Enemy : MonoBehaviour
 
         hitReactionController?.StopHitReaction();
         EnemyAnimationLayers.ReleaseOwner(animator, DeathLayerOwner);
+        stealthTargetLocked = false;
+        stealthKillPending = false;
+        stealthLockedAgent = null;
     }
 
     void RegisterActiveEnemy()
@@ -211,6 +222,111 @@ public class Enemy : MonoBehaviour
         regenHealth = currentHealth;
         UpdateHealthBar();
         return currentHealth <= 0f;
+    }
+
+    public void KillByStealth()
+    {
+        KillByStealth(false, 0f);
+    }
+
+    public void KillByStealth(bool playHitReaction, float deathDelay)
+    {
+        if (enemyData == null || isDead)
+        {
+            return;
+        }
+
+        if (playHitReaction)
+        {
+            PlayWeaponHitReaction();
+        }
+
+        stealthKillPending = true;
+        if (deathDelay > 0f)
+        {
+            StartCoroutine(KillByStealthAfterDelay(deathDelay));
+            return;
+        }
+
+        CompleteStealthKill();
+    }
+
+    IEnumerator KillByStealthAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        CompleteStealthKill();
+    }
+
+    void CompleteStealthKill()
+    {
+        if (enemyData == null || isDead)
+        {
+            return;
+        }
+
+        stealthKillPending = false;
+        physicalShieldStacks.Clear();
+        currentPhysicalShield = 0f;
+        currentHealth = 0f;
+        regenHealth = 0f;
+        UpdateHealthBar();
+        Die();
+    }
+
+    public void BeginStealthTargetLock()
+    {
+        if (isDead || stealthTargetLocked)
+        {
+            return;
+        }
+
+        enemyAI = enemyAI != null ? enemyAI : GetComponent<EnemyAI>();
+        meleeWeaponController = meleeWeaponController != null ? meleeWeaponController : GetComponent<EnemyMeleeWeaponController>();
+        rangedWeaponController = rangedWeaponController != null ? rangedWeaponController : GetComponent<EnemyRangedWeaponController>();
+        stealthLockedAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+
+        previousStealthAIEnabled = enemyAI != null && enemyAI.enabled;
+        previousStealthMeleeEnabled = meleeWeaponController != null && meleeWeaponController.enabled;
+        previousStealthRangedEnabled = rangedWeaponController != null && rangedWeaponController.enabled;
+        previousStealthAgentHadState = stealthLockedAgent != null && stealthLockedAgent.enabled && stealthLockedAgent.isOnNavMesh;
+        previousStealthAgentStopped = previousStealthAgentHadState && stealthLockedAgent.isStopped;
+
+        enemyAI?.SetLocomotionSuppressed(true);
+        SetEnemyAIEnabled(false);
+        SetMeleeWeaponControllerEnabled(false);
+        SetRangedWeaponControllerEnabled(false);
+
+        if (previousStealthAgentHadState)
+        {
+            stealthLockedAgent.isStopped = true;
+            stealthLockedAgent.velocity = Vector3.zero;
+        }
+
+        stealthTargetLocked = true;
+    }
+
+    public void EndStealthTargetLock()
+    {
+        if (!stealthTargetLocked)
+        {
+            return;
+        }
+
+        if (!isDead && !stealthKillPending)
+        {
+            SetEnemyAIEnabled(previousStealthAIEnabled);
+            SetMeleeWeaponControllerEnabled(previousStealthMeleeEnabled);
+            SetRangedWeaponControllerEnabled(previousStealthRangedEnabled);
+            enemyAI?.SetLocomotionSuppressed(false);
+
+            if (previousStealthAgentHadState && stealthLockedAgent != null && stealthLockedAgent.enabled && stealthLockedAgent.isOnNavMesh)
+            {
+                stealthLockedAgent.isStopped = previousStealthAgentStopped;
+            }
+        }
+
+        stealthTargetLocked = false;
+        stealthLockedAgent = null;
     }
 
     public void ClearDeathRitualHealth()

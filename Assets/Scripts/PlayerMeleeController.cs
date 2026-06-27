@@ -1,6 +1,9 @@
 using System.Collections;
 using Lean.Pool;
+using TMPro;
+using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.Splines;
 
 public class PlayerMeleeController : MonoBehaviour
 {
@@ -12,6 +15,7 @@ public class PlayerMeleeController : MonoBehaviour
     public PlayerWeaponAnimator weaponAnimator;
     public PlayerBlockController blockController;
     public PlayerMovement playerMovement;
+    public CameraControler cameraControler;
     public Transform cameraTransform;
 
     [Header("Melee Data")]
@@ -31,6 +35,38 @@ public class PlayerMeleeController : MonoBehaviour
     public float meleeHitSoundVolume = 0.8f;
     public bool logMeleeHits;
 
+    [Header("Stealth Melee")]
+    public bool enableStealthMelee = true;
+    public bool requireWeaponForStealth = true;
+    public bool requireUnawareTarget = true;
+    public bool requireBehindTarget = true;
+    public bool allowBossStealthKill;
+    public float stealthRange = 1f;
+    [Range(1f, 180f)] public float stealthPlayerFacingAngle = 110f;
+    [Range(1f, 180f)] public float stealthBackAngle = 120f;
+    public TMP_Text stealthPromptText;
+    public string stealthPromptMessage = "Tekan B - Stealth Melee";
+    public Color stealthPromptColor = Color.white;
+    public Vector2 stealthPromptAnchoredPosition = new Vector2(0f, -180f);
+    public float stealthPromptFontSize = 28f;
+
+    [Header("Stealth Cinematic")]
+    public CinemachineCamera stealthCinemachineCamera;
+    public CinemachineSplineDolly stealthDolly;
+    public SplineContainer stealthSpline;
+    public bool autoFindStealthCinemachine = true;
+    public int stealthCameraPriority = 60;
+    public float stealthDollyStartPosition = 0f;
+    public float stealthDollyEndPosition = 1f;
+    public float stealthDollyMoveDuration = 0.55f;
+    public bool applyStealthCameraLocalEulerAngles = true;
+    public Vector3 stealthCameraLocalEulerAngles = new Vector3(0f, -15f, 0f);
+    [Range(0.05f, 1f)] public float stealthAnimatorSpeed = 0.45f;
+    [Range(0.1f, 1f)] public float stealthKillMomentNormalized = 0.8f;
+    public float stealthTargetDeathDelay = 0.12f;
+    public float stealthStandDelay = 0.18f;
+    public float stealthRecoveryDelay = 0.25f;
+
     private AudioSource audioSource;
     private CharacterController characterController;
     private Coroutine meleeAttackRoutine;
@@ -41,6 +77,20 @@ public class PlayerMeleeController : MonoBehaviour
     private PlayerMeleeData fallbackTwoHandWeaponData;
     private PlayerMeleeData fallbackUnarmedPhysicalData;
     private KontrolPemain kontrolPemain;
+    private Enemy currentStealthTarget;
+    private Enemy lockedStealthTarget;
+    private bool stealthReferencesResolved;
+    private bool isStealthExecuting;
+    private bool previousPlayerMovementInput;
+    private bool previousStealthCrouching;
+    private bool previousStealthCrawling;
+    private bool previousCameraLookInput;
+    private bool previousAimInput;
+    private float previousAnimatorSpeed = 1f;
+    private Quaternion previousStealthCameraLocalRotation;
+    private bool hasPreviousStealthCameraLocalRotation;
+    private object previousStealthDollySpline;
+    private bool hasPreviousStealthDollySpline;
 
     public bool IsAttacking => meleeAttackRoutine != null;
 
@@ -51,6 +101,7 @@ public class PlayerMeleeController : MonoBehaviour
         weaponAnimator = weaponAnimator != null ? weaponAnimator : GetComponent<PlayerWeaponAnimator>();
         blockController = blockController != null ? blockController : GetComponent<PlayerBlockController>();
         playerMovement = playerMovement != null ? playerMovement : GetComponent<PlayerMovement>();
+        cameraControler = cameraControler != null ? cameraControler : GetComponent<CameraControler>();
         characterController = GetComponent<CharacterController>();
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
@@ -81,8 +132,12 @@ public class PlayerMeleeController : MonoBehaviour
     {
         if (!CanReadInput())
         {
+            UpdateStealthPrompt(null);
             return;
         }
+
+        currentStealthTarget = FindBestStealthTarget();
+        UpdateStealthPrompt(currentStealthTarget);
 
         if (IsPhysicalMeleePressedThisFrame())
         {
@@ -91,6 +146,11 @@ public class PlayerMeleeController : MonoBehaviour
 
         if (IsWeaponMeleePressedThisFrame())
         {
+            if (TryStealthMelee())
+            {
+                return;
+            }
+
             TryMeleeAttack(true);
         }
     }
@@ -105,6 +165,14 @@ public class PlayerMeleeController : MonoBehaviour
         }
 
         SetShootBlocked(false);
+        RestoreStealthSequenceState();
+        if (lockedStealthTarget != null)
+        {
+            lockedStealthTarget.EndStealthTargetLock();
+            lockedStealthTarget = null;
+        }
+
+        UpdateStealthPrompt(null);
     }
 
     void OnDestroy()
@@ -125,9 +193,11 @@ public class PlayerMeleeController : MonoBehaviour
     bool CanReadInput()
     {
         return allowInput
+            && !isStealthExecuting
             && playerShoot != null
             && playerShoot.enabled
             && playerShoot.allowInput
+            && !playerShoot.externalActionBlocksInput
             && !playerShoot.statusBlocksInput
             && (playerMovement == null || !playerMovement.IsGuardBroken)
             && !playerShoot.IsReloading
@@ -160,6 +230,37 @@ public class PlayerMeleeController : MonoBehaviour
         }
 
         meleeAttackRoutine = StartCoroutine(MeleeDamageRoutine(meleeData, duration, useWeaponMelee));
+    }
+
+    bool TryStealthMelee()
+    {
+        if (!enableStealthMelee || isStealthExecuting)
+        {
+            return false;
+        }
+
+        Enemy target = IsValidStealthTarget(currentStealthTarget)
+            ? currentStealthTarget
+            : FindBestStealthTarget();
+        if (target == null)
+        {
+            return false;
+        }
+
+        PlayerMeleeData meleeData = GetCurrentMeleeData(true);
+        if (meleeData == null || weaponAnimator == null || Time.time < nextMeleeTime)
+        {
+            return false;
+        }
+
+        UpdateStealthPrompt(null);
+        if (meleeAttackRoutine != null)
+        {
+            StopCoroutine(meleeAttackRoutine);
+        }
+
+        meleeAttackRoutine = StartCoroutine(StealthMeleeRoutine(meleeData, target));
+        return true;
     }
 
     PlayerMeleeData GetCurrentMeleeData(bool useWeaponMelee)
@@ -356,12 +457,365 @@ public class PlayerMeleeController : MonoBehaviour
         meleeAttackRoutine = null;
     }
 
+    IEnumerator StealthMeleeRoutine(PlayerMeleeData meleeData, Enemy target)
+    {
+        isStealthExecuting = true;
+        BeginStealthSequenceState();
+        if (target != null)
+        {
+            lockedStealthTarget = target;
+            target.BeginStealthTargetLock();
+        }
+
+        if (target != null)
+        {
+            Vector3 direction = GetDirectionToEnemy(target);
+            RotateTowardMeleeTarget(direction, meleeData != null ? meleeData.autoAimSpeed : 12f);
+        }
+
+        float standDelay = playerMovement != null && (playerMovement.IsCrouching || playerMovement.IsCrawling)
+            ? Mathf.Max(0f, stealthStandDelay)
+            : 0f;
+        playerMovement?.ForceStandingStance();
+        float elapsed = 0f;
+        while (elapsed < standDelay)
+        {
+            elapsed += Time.deltaTime;
+            UpdateStealthCinematicCamera(Time.deltaTime);
+            yield return null;
+        }
+
+        PlayerMeleeData currentMeleeData = GetCurrentMeleeData(true);
+        if (currentMeleeData != meleeData || meleeData == null || weaponAnimator == null)
+        {
+            EndStealthSequence();
+            yield break;
+        }
+
+        float animationSpeed = Mathf.Clamp(stealthAnimatorSpeed, 0.05f, 1f);
+        float durationMultiplier = 1f / animationSpeed;
+        Animator targetAnimator = weaponAnimator.animator;
+        if (targetAnimator != null)
+        {
+            previousAnimatorSpeed = targetAnimator.speed;
+            targetAnimator.speed = previousAnimatorSpeed * animationSpeed;
+        }
+
+        float animationDuration = weaponAnimator.PlayRandomMeleeState(meleeData, durationMultiplier);
+        if (animationDuration <= 0f)
+        {
+            EndStealthSequence();
+            yield break;
+        }
+
+        PlayRandomSound(meleeData.attackSounds, meleeData.attackSound, meleeAttackSoundVolume);
+        float cooldown = Mathf.Max(0.01f, meleeData.cooldown) * durationMultiplier;
+        nextMeleeTime = Time.time + Mathf.Max(cooldown, animationDuration);
+
+        float startTime = Time.time;
+        float killMoment = animationDuration * Mathf.Clamp(stealthKillMomentNormalized, 0.1f, 1f);
+        if (killMoment > 0f)
+        {
+            elapsed = 0f;
+            while (elapsed < killMoment)
+            {
+                elapsed += Time.deltaTime;
+                UpdateStealthCinematicCamera(Time.deltaTime);
+                yield return null;
+            }
+        }
+
+        if (IsValidStealthExecutionTarget(target))
+        {
+            PerformStealthKill(meleeData, target);
+        }
+
+        float remainingAnimation = Mathf.Max(0f, animationDuration - (Time.time - startTime));
+        while (remainingAnimation > 0f)
+        {
+            float delta = Time.deltaTime;
+            remainingAnimation -= delta;
+            UpdateStealthCinematicCamera(delta);
+            yield return null;
+        }
+
+        float recovery = Mathf.Max(0f, stealthRecoveryDelay);
+        elapsed = 0f;
+        while (elapsed < recovery)
+        {
+            elapsed += Time.deltaTime;
+            UpdateStealthCinematicCamera(Time.deltaTime);
+            yield return null;
+        }
+
+        EndStealthSequence();
+    }
+
+    void EndStealthSequence()
+    {
+        RestoreStealthSequenceState();
+        if (lockedStealthTarget != null)
+        {
+            lockedStealthTarget.EndStealthTargetLock();
+            lockedStealthTarget = null;
+        }
+
+        meleeAttackRoutine = null;
+        isStealthExecuting = false;
+    }
+
     void SetShootBlocked(bool blocked)
     {
         if (playerShoot != null)
         {
             playerShoot.externalActionBlocksInput = blocked;
         }
+    }
+
+    void BeginStealthSequenceState()
+    {
+        ResolveStealthCinemachineReferences();
+        SetShootBlocked(true);
+
+        if (playerMovement != null)
+        {
+            previousPlayerMovementInput = playerMovement.allowInput;
+            previousStealthCrouching = playerMovement.IsCrouching;
+            previousStealthCrawling = playerMovement.IsCrawling;
+            playerMovement.allowInput = false;
+        }
+
+        if (cameraControler != null)
+        {
+            previousCameraLookInput = cameraControler.allowLookInput;
+            cameraControler.allowLookInput = false;
+        }
+
+        if (weaponAnimator != null)
+        {
+            previousAimInput = weaponAnimator.allowAimInput;
+            weaponAnimator.SetAimInputEnabled(false, true);
+            if (weaponAnimator.animator != null)
+            {
+                previousAnimatorSpeed = weaponAnimator.animator.speed;
+            }
+        }
+
+        BeginStealthCinematicCamera();
+    }
+
+    void RestoreStealthSequenceState()
+    {
+        if (!isStealthExecuting)
+        {
+            return;
+        }
+
+        SetShootBlocked(false);
+
+        if (playerMovement != null)
+        {
+            playerMovement.allowInput = previousPlayerMovementInput;
+            playerMovement.SetStance(previousStealthCrouching, previousStealthCrawling);
+        }
+
+        if (cameraControler != null)
+        {
+            cameraControler.allowLookInput = previousCameraLookInput;
+        }
+
+        if (weaponAnimator != null)
+        {
+            weaponAnimator.SetAimInputEnabled(previousAimInput, false);
+            if (weaponAnimator.animator != null)
+            {
+                weaponAnimator.animator.speed = previousAnimatorSpeed <= 0f ? 1f : previousAnimatorSpeed;
+            }
+        }
+
+        EndStealthCinematicCamera();
+        isStealthExecuting = false;
+    }
+
+    void BeginStealthCinematicCamera()
+    {
+        if (stealthDolly != null)
+        {
+            CacheAndAssignStealthSpline();
+            stealthDolly.CameraPosition = stealthDollyStartPosition;
+        }
+
+        if (stealthCinemachineCamera != null)
+        {
+            stealthCinemachineCamera.Priority = stealthCameraPriority;
+            if (applyStealthCameraLocalEulerAngles)
+            {
+                previousStealthCameraLocalRotation = stealthCinemachineCamera.transform.localRotation;
+                hasPreviousStealthCameraLocalRotation = true;
+                stealthCinemachineCamera.transform.localRotation = Quaternion.Euler(stealthCameraLocalEulerAngles);
+            }
+        }
+    }
+
+    void UpdateStealthCinematicCamera(float deltaTime)
+    {
+        if (stealthCinemachineCamera != null)
+        {
+            stealthCinemachineCamera.Priority = stealthCameraPriority;
+            if (applyStealthCameraLocalEulerAngles)
+            {
+                stealthCinemachineCamera.transform.localRotation = Quaternion.Euler(stealthCameraLocalEulerAngles);
+            }
+        }
+
+        if (stealthDolly == null)
+        {
+            return;
+        }
+
+        float moveDuration = Mathf.Max(0.01f, stealthDollyMoveDuration);
+        float distance = Mathf.Abs(stealthDollyEndPosition - stealthDollyStartPosition);
+        float speed = distance <= 0.0001f ? 1000f : distance / moveDuration;
+        stealthDolly.CameraPosition = Mathf.MoveTowards(
+            stealthDolly.CameraPosition,
+            stealthDollyEndPosition,
+            speed * Mathf.Max(0f, deltaTime)
+        );
+    }
+
+    void EndStealthCinematicCamera()
+    {
+        if (stealthCinemachineCamera != null)
+        {
+            stealthCinemachineCamera.Priority = 0;
+            if (hasPreviousStealthCameraLocalRotation)
+            {
+                stealthCinemachineCamera.transform.localRotation = previousStealthCameraLocalRotation;
+                hasPreviousStealthCameraLocalRotation = false;
+            }
+        }
+
+        if (stealthDolly != null)
+        {
+            stealthDolly.CameraPosition = stealthDollyStartPosition;
+            RestorePreviousStealthSpline();
+        }
+    }
+
+    void ResolveStealthCinemachineReferences()
+    {
+        if (stealthReferencesResolved || !autoFindStealthCinemachine)
+        {
+            return;
+        }
+
+        stealthReferencesResolved = true;
+        if (stealthSpline == null)
+        {
+            stealthSpline = FindNamedSceneComponent<SplineContainer>("Stealth");
+        }
+
+        if (stealthCinemachineCamera == null)
+        {
+            stealthCinemachineCamera = FindNamedSceneComponent<CinemachineCamera>("Stealth");
+        }
+
+        if (stealthDolly == null && stealthCinemachineCamera != null)
+        {
+            stealthDolly = stealthCinemachineCamera.GetComponent<CinemachineSplineDolly>();
+        }
+
+        if (stealthDolly == null)
+        {
+            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < dollies.Length; i++)
+            {
+                CinemachineSplineDolly candidate = dollies[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                string splineName = candidate.Spline != null ? candidate.Spline.name : string.Empty;
+                if (candidate.name.ToLowerInvariant().Contains("stealth") || splineName.ToLowerInvariant().Contains("stealth"))
+                {
+                    stealthDolly = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (stealthDolly == null && stealthSpline != null)
+        {
+            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (dollies.Length > 0)
+            {
+                stealthDolly = dollies[0];
+            }
+        }
+
+        if (stealthCinemachineCamera == null && stealthDolly != null)
+        {
+            stealthCinemachineCamera = stealthDolly.GetComponent<CinemachineCamera>();
+        }
+    }
+
+    T FindNamedSceneComponent<T>(string namePart) where T : Component
+    {
+        T[] components = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        string needle = string.IsNullOrEmpty(namePart) ? string.Empty : namePart.ToLowerInvariant();
+        for (int i = 0; i < components.Length; i++)
+        {
+            T component = components[i];
+            if (component != null && component.name.ToLowerInvariant().Contains(needle))
+            {
+                return component;
+            }
+        }
+
+        return null;
+    }
+
+    void CacheAndAssignStealthSpline()
+    {
+        if (stealthDolly == null || stealthSpline == null)
+        {
+            return;
+        }
+
+        System.Reflection.PropertyInfo splineProperty = typeof(CinemachineSplineDolly).GetProperty("Spline");
+        if (splineProperty == null)
+        {
+            return;
+        }
+
+        if (!hasPreviousStealthDollySpline && splineProperty.CanRead)
+        {
+            previousStealthDollySpline = splineProperty.GetValue(stealthDolly);
+            hasPreviousStealthDollySpline = true;
+        }
+
+        if (splineProperty.CanWrite)
+        {
+            splineProperty.SetValue(stealthDolly, stealthSpline);
+        }
+    }
+
+    void RestorePreviousStealthSpline()
+    {
+        if (!hasPreviousStealthDollySpline || stealthDolly == null)
+        {
+            return;
+        }
+
+        System.Reflection.PropertyInfo splineProperty = typeof(CinemachineSplineDolly).GetProperty("Spline");
+        if (splineProperty != null && splineProperty.CanWrite)
+        {
+            splineProperty.SetValue(stealthDolly, previousStealthDollySpline);
+        }
+
+        previousStealthDollySpline = null;
+        hasPreviousStealthDollySpline = false;
     }
 
     float GetMeleeApproachDuration(PlayerMeleeData meleeData, Enemy target, float minimumDuration, float animationDuration)
@@ -483,6 +937,30 @@ public class PlayerMeleeController : MonoBehaviour
         }
     }
 
+    void PerformStealthKill(PlayerMeleeData meleeData, Enemy enemy)
+    {
+        if (enemy == null)
+        {
+            return;
+        }
+
+        Vector3 direction = GetDirectionToEnemy(enemy);
+        Vector3 hitPoint = GetEnemyHitPoint(enemy, direction);
+        SpawnEnemyHitEffect(meleeData, hitPoint, -direction, true);
+        PlayRandomSound(meleeData != null ? meleeData.hitSounds : null, meleeData != null ? meleeData.hitSound : null, meleeHitSoundVolume);
+
+        enemy.KillByStealth(true, Mathf.Max(0f, stealthTargetDeathDelay));
+        if (logMeleeHits)
+        {
+            Debug.Log($"Stealth melee killed {enemy.name}");
+        }
+
+        if (drawDebugLaser)
+        {
+            Debug.DrawLine(GetMeleeOrigin(), hitPoint, Color.red, debugLaserDuration);
+        }
+    }
+
     Enemy FindBestMeleeTarget(PlayerMeleeData meleeData, float searchRange)
     {
         if (meleeData == null || searchRange <= 0f)
@@ -521,6 +999,138 @@ public class PlayerMeleeController : MonoBehaviour
         }
 
         return bestEnemy;
+    }
+
+    Enemy FindBestStealthTarget()
+    {
+        if (!enableStealthMelee || stealthRange <= 0f || !HasWeaponForStealth())
+        {
+            return null;
+        }
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, stealthRange, GetHitMask(), QueryTriggerInteraction.Ignore);
+        Enemy bestEnemy = null;
+        float bestDistanceSqr = float.MaxValue;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hit = hits[i];
+            if (hit == null || hit.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            Enemy enemy = hit.GetComponentInParent<Enemy>();
+            if (!IsValidStealthTarget(enemy))
+            {
+                continue;
+            }
+
+            float distanceSqr = (enemy.transform.position - transform.position).sqrMagnitude;
+            if (distanceSqr < bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                bestEnemy = enemy;
+            }
+        }
+
+        return bestEnemy;
+    }
+
+    bool IsValidStealthTarget(Enemy enemy)
+    {
+        if (!enableStealthMelee
+            || enemy == null
+            || enemy.IsDead
+            || !HasWeaponForStealth()
+            || IsRestrictedStealthTarget(enemy))
+        {
+            return false;
+        }
+
+        Vector3 toEnemy = enemy.transform.position - transform.position;
+        toEnemy.y = 0f;
+        float distance = toEnemy.magnitude;
+        if (distance <= 0.001f || distance > stealthRange)
+        {
+            return false;
+        }
+
+        float playerAngleLimit = Mathf.Clamp(stealthPlayerFacingAngle, 1f, 180f) * 0.5f;
+        if (Vector3.Angle(GetMeleeForward(), toEnemy.normalized) > playerAngleLimit)
+        {
+            return false;
+        }
+
+        if (requireBehindTarget && !IsBehindEnemy(enemy))
+        {
+            return false;
+        }
+
+        if (requireUnawareTarget && !IsEnemyUnaware(enemy))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool HasWeaponForStealth()
+    {
+        return !requireWeaponForStealth || playerShoot != null && playerShoot.currentWeapon != null;
+    }
+
+    bool IsRestrictedStealthTarget(Enemy enemy)
+    {
+        if (allowBossStealthKill || enemy == null || enemy.enemyData == null)
+        {
+            return false;
+        }
+
+        return enemy.enemyData.enemyType == EnemyType.Boss || enemy.enemyData.enemyType == EnemyType.MiniBoss;
+    }
+
+    bool IsBehindEnemy(Enemy enemy)
+    {
+        Vector3 enemyToPlayer = transform.position - enemy.transform.position;
+        enemyToPlayer.y = 0f;
+        if (enemyToPlayer.sqrMagnitude < 0.0001f)
+        {
+            return false;
+        }
+
+        Vector3 enemyBackward = -enemy.transform.forward;
+        enemyBackward.y = 0f;
+        if (enemyBackward.sqrMagnitude < 0.0001f)
+        {
+            return false;
+        }
+
+        float angleLimit = Mathf.Clamp(stealthBackAngle, 1f, 180f) * 0.5f;
+        return Vector3.Angle(enemyBackward.normalized, enemyToPlayer.normalized) <= angleLimit;
+    }
+
+    bool IsEnemyUnaware(Enemy enemy)
+    {
+        EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+        if (enemyAI == null)
+        {
+            return true;
+        }
+
+        return enemyAI.currentState == EnemyAIState.Idle || enemyAI.currentState == EnemyAIState.Patrol;
+    }
+
+    bool IsValidStealthExecutionTarget(Enemy enemy)
+    {
+        if (enemy == null || enemy.IsDead || !HasWeaponForStealth() || IsRestrictedStealthTarget(enemy))
+        {
+            return false;
+        }
+
+        Vector3 toEnemy = enemy.transform.position - transform.position;
+        toEnemy.y = 0f;
+        return toEnemy.sqrMagnitude <= Mathf.Pow(Mathf.Max(0.01f, stealthRange + 0.35f), 2f);
     }
 
     bool IsValidMeleeTarget(PlayerMeleeData meleeData, Enemy enemy, float maxRange)
@@ -749,6 +1359,89 @@ public class PlayerMeleeController : MonoBehaviour
         {
             LeanPool.Despawn(instance, impactEffectLifetime);
         }
+    }
+
+    void UpdateStealthPrompt(Enemy target)
+    {
+        if (target == null && stealthPromptText == null)
+        {
+            return;
+        }
+
+        if (stealthPromptText == null)
+        {
+            EnsureStealthPromptText();
+        }
+
+        if (stealthPromptText == null)
+        {
+            return;
+        }
+
+        bool show = target != null && CanReadInput();
+        stealthPromptText.gameObject.SetActive(show);
+        if (!show)
+        {
+            return;
+        }
+
+        stealthPromptText.text = string.IsNullOrEmpty(stealthPromptMessage)
+            ? "Tekan B - Stealth Melee"
+            : stealthPromptMessage;
+        stealthPromptText.color = stealthPromptColor;
+    }
+
+    void EnsureStealthPromptText()
+    {
+        Canvas canvas = FindStealthPromptCanvas();
+        if (canvas == null)
+        {
+            return;
+        }
+
+        GameObject textObject = new GameObject("Stealth Melee Prompt", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(canvas.transform, false);
+
+        RectTransform rect = textObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = stealthPromptAnchoredPosition;
+        rect.sizeDelta = new Vector2(520f, 64f);
+
+        stealthPromptText = textObject.GetComponent<TMP_Text>();
+        stealthPromptText.alignment = TextAlignmentOptions.Center;
+        stealthPromptText.fontSize = stealthPromptFontSize;
+        stealthPromptText.raycastTarget = false;
+        stealthPromptText.color = stealthPromptColor;
+        stealthPromptText.text = stealthPromptMessage;
+        stealthPromptText.gameObject.SetActive(false);
+    }
+
+    Canvas FindStealthPromptCanvas()
+    {
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Canvas fallback = null;
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas canvas = canvases[i];
+            if (canvas == null || canvas.renderMode == RenderMode.WorldSpace)
+            {
+                continue;
+            }
+
+            if (fallback == null)
+            {
+                fallback = canvas;
+            }
+
+            if (canvas.isActiveAndEnabled)
+            {
+                return canvas;
+            }
+        }
+
+        return fallback;
     }
 
     void PlayRandomSound(AudioClip[] clips, AudioClip fallbackClip, float volume)

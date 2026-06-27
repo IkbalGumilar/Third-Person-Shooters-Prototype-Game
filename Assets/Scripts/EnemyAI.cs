@@ -43,6 +43,11 @@ public class EnemyAI : MonoBehaviour
     private float randomPatrolRadius = 6f;
     private float detectionRange = 10f;
     private float loseTargetRange = 14f;
+    private bool requireLineOfSightForDetection = true;
+    private LayerMask visionLineOfSightMask = ~0;
+    private float visionEyeHeight = 1.6f;
+    private float visionTargetHeight = 1.1f;
+    private float loseSightGraceDuration = 1.5f;
     private float shotAlertRangeMultiplier = 3f;
     private float shotAlertShareRadius = 5f;
     private float shotAlertMinDuration = 5f;
@@ -113,6 +118,7 @@ public class EnemyAI : MonoBehaviour
     private float idleTimer;
     private float stunnedUntilTime;
     private float shotAlertUntilTime;
+    private float lastTimeSawPlayer = Mathf.NegativeInfinity;
     private Coroutine knockbackCoroutine;
     private bool hasDestination;
     private float fallbackStoppingDistance;
@@ -345,18 +351,96 @@ public class EnemyAI : MonoBehaviour
         }
 
         float distanceToPlayerSqr = (transform.position - playerTarget.position).sqrMagnitude;
+        bool canSeePlayer = CanSeePlayer();
+        if (canSeePlayer)
+        {
+            lastTimeSawPlayer = Time.time;
+        }
+
+        bool hasActiveCombatTarget = currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack;
+        bool canDetectPlayer = IsShotAlerted || persistentChaseTarget || !requireLineOfSightForDetection || canSeePlayer;
         float detectionRange = GetDetectionRange();
-        if (currentState != EnemyAIState.Chase && currentState != EnemyAIState.Attack && distanceToPlayerSqr <= detectionRange * detectionRange)
+        if (!hasActiveCombatTarget && canDetectPlayer && distanceToPlayerSqr <= detectionRange * detectionRange)
         {
             EnterChase();
             return;
         }
 
         float loseTargetRange = GetLoseTargetRange();
-        if (!persistentChaseTarget && (currentState == EnemyAIState.Chase || currentState == EnemyAIState.Attack) && distanceToPlayerSqr > loseTargetRange * loseTargetRange)
+        if (!persistentChaseTarget && hasActiveCombatTarget && distanceToPlayerSqr > loseTargetRange * loseTargetRange)
+        {
+            EnterIdle();
+            return;
+        }
+
+        bool lostLineOfSight = requireLineOfSightForDetection
+            && !IsShotAlerted
+            && hasActiveCombatTarget
+            && !canSeePlayer
+            && Time.time - lastTimeSawPlayer > loseSightGraceDuration;
+        if (!persistentChaseTarget && lostLineOfSight)
         {
             EnterIdle();
         }
+    }
+
+    bool CanSeePlayer()
+    {
+        if (playerTarget == null)
+        {
+            return false;
+        }
+
+        if (!requireLineOfSightForDetection)
+        {
+            return true;
+        }
+
+        Vector3 origin = transform.position + Vector3.up * Mathf.Max(0f, visionEyeHeight);
+        Vector3 target = playerTarget.position + Vector3.up * Mathf.Max(0f, visionTargetHeight);
+        Vector3 toTarget = target - origin;
+        float distance = toTarget.magnitude;
+        if (distance <= 0.001f)
+        {
+            return true;
+        }
+
+        int mask = visionLineOfSightMask.value == 0 ? Physics.DefaultRaycastLayers : visionLineOfSightMask.value;
+        RaycastHit[] hits = Physics.RaycastAll(origin, toTarget / distance, distance, mask, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            Transform hitTransform = hitCollider.transform;
+            if (hitTransform == transform || hitTransform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (hitTransform == playerTarget || hitTransform.IsChildOf(playerTarget))
+            {
+                return true;
+            }
+
+            if (hitCollider.GetComponentInParent<PlayerHealth>() != null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
     }
 
     public void SetPersistentChaseTarget(Transform target)
@@ -1905,6 +1989,11 @@ public class EnemyAI : MonoBehaviour
         randomPatrolRadius = data.randomPatrolRadius;
         detectionRange = data.detectionRange;
         loseTargetRange = data.loseTargetRange;
+        requireLineOfSightForDetection = data.requireLineOfSightForDetection;
+        visionLineOfSightMask = data.visionLineOfSightMask;
+        visionEyeHeight = data.visionEyeHeight;
+        visionTargetHeight = data.visionTargetHeight;
+        loseSightGraceDuration = data.loseSightGraceDuration;
         shotAlertRangeMultiplier = data.shotAlertRangeMultiplier;
         shotAlertShareRadius = data.shotAlertShareRadius;
         shotAlertMinDuration = data.shotAlertMinDuration;

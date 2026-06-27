@@ -60,6 +60,15 @@ public class CameraControler : MonoBehaviour
     public bool useCinemachine = true;
     [Tooltip("Assign the Cinemachine Camera created in the scene. This script never creates or configures Cinemachine objects.")]
     public CinemachineCamera cinemachineCamera;
+    [Header("Camera Collision")]
+    public bool enableCameraObstacleCollision = true;
+    public bool addCameraObstacleResolverAtRuntime = true;
+    public LayerMask cameraObstacleMask = ~0;
+    [Min(0.01f)] public float cameraCollisionRadius = 0.35f;
+    [Min(0f)] public float cameraCollisionSurfaceOffset = 0.12f;
+    [Min(0f)] public float cameraCollisionMinimumDistance = 0.35f;
+    public Transform cameraCollisionOrigin;
+    public Vector3 cameraCollisionOriginLocalOffset = new Vector3(0f, 1.4f, 0f);
 
     private KontrolPemain kontrolPemain;
     private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
@@ -81,6 +90,7 @@ public class CameraControler : MonoBehaviour
     private Color currentAimColor;
     private Vector3 defaultAimTargetLocalPosition;
     private bool hasDefaultAimTargetLocalPosition;
+    private CameraObstacleResolver cameraObstacleResolver;
 
     void Awake()
     {
@@ -143,6 +153,7 @@ public class CameraControler : MonoBehaviour
         ApplyAimColor(currentAimColor);
 
         SetupCinemachine();
+        SetupCameraObstacleResolver();
 
         if (cameraTransform != null && (!useCinemachine || cinemachineCamera == null))
         {
@@ -185,6 +196,7 @@ public class CameraControler : MonoBehaviour
         RotatePlayerWithCamera();
         ApplyAimTargetRotation();
         SyncCinemachineTargets();
+        SyncCameraObstacleResolver();
         UpdateAimLookTargetFromCameraRay();
         if (applyManualUpperBodyAim)
         {
@@ -562,6 +574,39 @@ public class CameraControler : MonoBehaviour
 
         // Cinemachine setup is intentionally manual in the scene. Do not add,
         // discover, or mutate a Brain, virtual camera, or its components here.
+    }
+
+    void SetupCameraObstacleResolver()
+    {
+        if (!enableCameraObstacleCollision || cameraTransform == null)
+        {
+            return;
+        }
+
+        cameraObstacleResolver = cameraTransform.GetComponent<CameraObstacleResolver>();
+        if (cameraObstacleResolver == null && addCameraObstacleResolverAtRuntime)
+        {
+            cameraObstacleResolver = cameraTransform.gameObject.AddComponent<CameraObstacleResolver>();
+        }
+
+        SyncCameraObstacleResolver();
+    }
+
+    void SyncCameraObstacleResolver()
+    {
+        if (cameraObstacleResolver == null)
+        {
+            return;
+        }
+
+        cameraObstacleResolver.enableCollision = enableCameraObstacleCollision;
+        cameraObstacleResolver.collisionOrigin = cameraCollisionOrigin != null ? cameraCollisionOrigin : transform;
+        cameraObstacleResolver.collisionOriginLocalOffset = cameraCollisionOriginLocalOffset;
+        cameraObstacleResolver.ignoreRoot = transform;
+        cameraObstacleResolver.obstacleMask = cameraObstacleMask;
+        cameraObstacleResolver.collisionRadius = cameraCollisionRadius;
+        cameraObstacleResolver.surfaceOffset = cameraCollisionSurfaceOffset;
+        cameraObstacleResolver.minimumDistanceFromOrigin = cameraCollisionMinimumDistance;
     }
 
     void SyncCinemachineTargets()

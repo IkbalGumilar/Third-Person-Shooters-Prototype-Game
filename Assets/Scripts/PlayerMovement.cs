@@ -90,11 +90,11 @@ public class PlayerMovement : MonoBehaviour
     public string oneHandGroundedStateName = "Armed Locomotion";
     public string oneHandRunLocomotionStateName = "Armed Run Locomotion";
     public string oneHandCrouchLocomotionStateName = "Armed Crouch Locomotion";
-    public string oneHandCrawlLocomotionStateName = "";
+    public string oneHandCrawlLocomotionStateName = "Crawl Locomotion";
     public string twoHandGroundedStateName = "2Hand Shooting Locomotion";
     public string twoHandRunLocomotionStateName = "2Hand Shooting Run Locomotion";
     public string twoHandCrouchLocomotionStateName = "2Hand Shooting Crouch Locomotion";
-    public string twoHandCrawlLocomotionStateName = "";
+    public string twoHandCrawlLocomotionStateName = "Crawl Locomotion";
     [Header("Weapon Action Profiles")]
     public string unarmedJumpStateName = "Unarmed-Jump";
     public string unarmedFallStateName = "Unarmed-Fall";
@@ -226,6 +226,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 standingControllerCenter;
 
     public bool IsCrouching => isCrouching;
+    public bool IsCrawling => isCrawling;
     public float StandingControllerHeight => standingControllerHeight;
     public float CurrentControllerHeight => controller != null ? controller.height : standingControllerHeight;
     private bool hasHorizontalParameter;
@@ -260,6 +261,20 @@ public class PlayerMovement : MonoBehaviour
     public void SetEquippedWeapon(Weapon weapon)
     {
         ApplyLocomotionProfile(weapon, true);
+    }
+
+    public void ForceStandingStance()
+    {
+        SetStance(false, false);
+    }
+
+    public void SetStance(bool crouching, bool crawling)
+    {
+        isCrawling = crawling;
+        isCrouching = crouching || crawling;
+        UpdateControllerStance();
+        SetAnimatorBool("IsCrouching", isCrouching);
+        SetAnimatorBool("IsCrawling", isCrawling);
     }
 
     void Awake()
@@ -1459,7 +1474,7 @@ public class PlayerMovement : MonoBehaviour
             activeGroundedStateName = ResolveProfileState(oneHandGroundedStateName, groundedStateName);
             activeRunLocomotionStateName = ResolveProfileState(oneHandRunLocomotionStateName, runLocomotionStateName);
             activeCrouchLocomotionStateName = ResolveProfileState(oneHandCrouchLocomotionStateName, crouchLocomotionStateName);
-            activeCrawlLocomotionStateName = ResolveProfileState(oneHandCrawlLocomotionStateName, activeCrouchLocomotionStateName);
+            activeCrawlLocomotionStateName = ResolveProfileState(oneHandCrawlLocomotionStateName, crawlLocomotionStateName);
             activeJumpStateName = ResolveProfileState(oneHandJumpStateName, jumpStateName);
             activeFallStateName = ResolveProfileState(oneHandFallStateName, fallStateName);
             activeLandStateName = ResolveProfileState(oneHandLandStateName, landStateName);
@@ -1473,7 +1488,7 @@ public class PlayerMovement : MonoBehaviour
             activeGroundedStateName = ResolveProfileState(twoHandGroundedStateName, groundedStateName);
             activeRunLocomotionStateName = ResolveProfileState(twoHandRunLocomotionStateName, runLocomotionStateName);
             activeCrouchLocomotionStateName = ResolveProfileState(twoHandCrouchLocomotionStateName, crouchLocomotionStateName);
-            activeCrawlLocomotionStateName = ResolveProfileState(twoHandCrawlLocomotionStateName, activeCrouchLocomotionStateName);
+            activeCrawlLocomotionStateName = ResolveProfileState(twoHandCrawlLocomotionStateName, crawlLocomotionStateName);
             activeJumpStateName = ResolveProfileState(twoHandJumpStateName, jumpStateName);
             activeFallStateName = ResolveProfileState(twoHandFallStateName, fallStateName);
             activeLandStateName = ResolveProfileState(twoHandLandStateName, landStateName);

@@ -512,6 +512,11 @@ public class PlayerWeaponAnimator : MonoBehaviour
 
     public float PlayRandomMeleeState(PlayerMeleeData meleeData)
     {
+        return PlayRandomMeleeState(meleeData, 1f);
+    }
+
+    public float PlayRandomMeleeState(PlayerMeleeData meleeData, float durationMultiplier)
+    {
         if (externalActionOverride || meleeData == null || animator == null)
         {
             return 0f;
@@ -549,7 +554,8 @@ public class PlayerWeaponAnimator : MonoBehaviour
         currentMeleeLayerIndex = layerIndex;
         animator.CrossFadeInFixedTime(stateHash, Mathf.Max(0f, meleeData.crossFade), layerIndex);
 
-        float duration = Mathf.Max(meleeData.animationDuration, GetActiveStateDuration(layerIndex));
+        float duration = Mathf.Max(meleeData.animationDuration, GetActiveStateDuration(layerIndex))
+            * Mathf.Max(0.01f, durationMultiplier);
         meleeRoutine = StartCoroutine(StopMeleeAfterDelay(layerIndex, duration));
         return duration;
     }

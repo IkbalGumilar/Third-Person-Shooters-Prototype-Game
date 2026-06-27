@@ -70,6 +70,12 @@ public class EnemyData : ScriptableObject
     public float randomPatrolRadius = 6f;
     public float detectionRange = 10f;
     public float loseTargetRange = 14f;
+    [Header("Vision")]
+    public bool requireLineOfSightForDetection = true;
+    public LayerMask visionLineOfSightMask = ~0;
+    public float visionEyeHeight = 1.6f;
+    public float visionTargetHeight = 1.1f;
+    public float loseSightGraceDuration = 1.5f;
     public float shotAlertRangeMultiplier = 3f;
     public float shotAlertShareRadius = 5f;
     public float shotAlertMinDuration = 5f;
