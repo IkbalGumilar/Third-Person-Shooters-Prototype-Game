@@ -9,6 +9,7 @@ public class CameraControler : MonoBehaviour
     public float lookSensitivity = 8f;
     [Range(0.1f, 5f)] public float cameraSensitivityMultiplier = 1f;
     [Range(0.1f, 5f)] public float aimSensitivityMultiplier = 1f;
+    public bool invertMouseY;
     public float sensitivityMultiplier = 1f;
     [HideInInspector] public float scopeSensitivityMultiplier = 1f;
     public PlayerWeaponAnimator weaponAnimator;
@@ -217,7 +218,7 @@ public class CameraControler : MonoBehaviour
         float userSensitivityMultiplier = IsAimActive() ? aimSensitivityMultiplier : cameraSensitivityMultiplier;
         float currentSensitivity = lookSensitivity * sensitivityMultiplier * userSensitivityMultiplier * scopeSensitivityMultiplier;
         targetYaw += lookInput.x * currentSensitivity * Time.deltaTime;
-        targetPitch -= lookInput.y * currentSensitivity * Time.deltaTime;
+        targetPitch += (invertMouseY ? lookInput.y : -lookInput.y) * currentSensitivity * Time.deltaTime;
         targetPitch = Mathf.Clamp(targetPitch, minVerticalAngle, maxVerticalAngle);
 
         yaw = Mathf.SmoothDampAngle(yaw, targetYaw, ref yawVelocity, yawSmoothTime);

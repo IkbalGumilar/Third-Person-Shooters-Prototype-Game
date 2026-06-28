@@ -12,6 +12,13 @@ using UnityEngine.UI;
 /// <summary>Runtime controller for the Options canvas in MainScene.</summary>
 public sealed class InGameOptionsMenu : MonoBehaviour
 {
+    private enum OptionTab
+    {
+        Graphics,
+        Control,
+        Audio
+    }
+
     [Serializable]
     private sealed class OptionInformationEntry
     {
@@ -35,6 +42,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private const string FullscreenKey = "Graphics.Fullscreen";
     private const string CameraSensitivityKey = "Controls.CameraSensitivity";
     private const string AimSensitivityKey = "Controls.AimSensitivity";
+    private const string InvertMouseKey = "Controls.InvertMouse";
     private const float DefaultCameraSensitivity = 1.2f;
     private const float DefaultAimSensitivity = 0.9f;
     private const string BloomKey = "PostProcessing.Bloom";
@@ -63,6 +71,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private Slider fullscreenSlider;
     private Slider cameraSensitivitySlider;
     private Slider aimSensitivitySlider;
+    private Toggle invertMouseToggle;
+    private Slider invertMouseSlider;
+    private TMP_Text cameraSensitivityValueText;
+    private TMP_Text aimSensitivityValueText;
     private Toggle bloomToggle;
     private Toggle motionBlurToggle;
     private Toggle depthOfFieldToggle;
@@ -87,7 +99,24 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private PostProcessingSettings sharedPostProcessingSettings;
     private ResourceUsageDisplay resourceUsageDisplay;
     private Color applyDefaultColor;
+    [Header("Option Tabs")]
+    [SerializeField] private GameObject graphicsMenu;
+    [SerializeField] private GameObject controlMenu;
+    [SerializeField] private GameObject audioMenu;
+    [SerializeField] private GameObject graphicsTabHighlight;
+    [SerializeField] private GameObject controlTabHighlight;
+    [SerializeField] private GameObject audioTabHighlight;
+    [SerializeField] private Button graphicsTabButton;
+    [SerializeField] private Button controlTabButton;
+    [SerializeField] private Button audioTabButton;
+    [SerializeField] private Button resetSensitivityButton;
+    [SerializeField] private Button closeButton;
+    [Header("Option Navigation")]
+    [SerializeField] private Selectable firstSelectedOption;
+    [SerializeField] private bool autoConfigureOptionNavigation = true;
+    private OptionTab selectedTab = OptionTab.Graphics;
     private readonly List<Resolution> resolutions = new();
+    private readonly List<Selectable> optionNavigationSelectables = new();
     private readonly Dictionary<RectTransform, Vector3> optionChildOpenScales = new();
     private Vector2 optionPanelOpenPosition;
     private Coroutine optionAnimationRoutine;
@@ -133,6 +162,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateRuntimeController()
     {
+        if (instance != null || FindActiveSceneController() != null)
+        {
+            return;
+        }
+
         var controllerObject = new GameObject(nameof(InGameOptionsMenu));
         DontDestroyOnLoad(controllerObject);
         controllerObject.AddComponent<InGameOptionsMenu>();
@@ -142,6 +176,20 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     {
         if (instance != null && instance != this)
         {
+            if (IsActiveSceneController(this) && !IsActiveSceneController(instance))
+            {
+                Destroy(instance.gameObject);
+                instance = null;
+            }
+            else
+            {
+                enabled = false;
+                return;
+            }
+        }
+
+        if (instance != null && instance != this)
+        {
             enabled = false;
             return;
         }
@@ -149,6 +197,26 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         instance = this;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         BindCurrentScene();
+    }
+
+    private static InGameOptionsMenu FindActiveSceneController()
+    {
+        foreach (InGameOptionsMenu controller in Resources.FindObjectsOfTypeAll<InGameOptionsMenu>())
+        {
+            if (IsActiveSceneController(controller))
+            {
+                return controller;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsActiveSceneController(InGameOptionsMenu controller)
+    {
+        return controller != null
+            && controller.gameObject.scene.IsValid()
+            && controller.gameObject.scene == SceneManager.GetActiveScene();
     }
 
     private void OnDestroy()
@@ -177,11 +245,17 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             return;
         }
 
+        if (optionsOpen && optionPanel != null && optionPanel.activeInHierarchy && (confirmationPanel == null || !confirmationPanel.activeSelf))
+        {
+            RestoreOptionSelectionIfNeeded();
+        }
+
+        bool togglePressed = WasOptionsTogglePressed();
+        bool cancelPressed = optionsOpen && WasOptionsCancelPressed();
         if (optionPanel == null
             || isLoadingMainMenu
             || optionAnimationRoutine != null
-            || Keyboard.current == null
-            || !Keyboard.current.escapeKey.wasPressedThisFrame
+            || (!togglePressed && !cancelPressed)
             || InventoryGridUI.IsAnyInventoryOpen
             || InventoryGridUI.LastClosedByCancelFrame == Time.frameCount)
         {
@@ -196,10 +270,21 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             ResumeGame();
         }
-        else
+        else if (togglePressed)
         {
             OpenOptions();
         }
+    }
+
+    private static bool WasOptionsTogglePressed()
+    {
+        return (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            || (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame);
+    }
+
+    private static bool WasOptionsCancelPressed()
+    {
+        return Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -259,8 +344,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         fullscreenToggle = FindComponentOrChild<Toggle>("FullScreenMode", "Full screen", "Fullscreen");
         vSyncSlider = FindComponentOrChild<Slider>("V-Sync", "VSync");
         fullscreenSlider = FindComponentOrChild<Slider>("FullScreenMode", "Full screen", "Fullscreen");
-        cameraSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity", "Camera Sensitivity", "Mouse Sensitivity");
-        aimSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity aim", "Aim Sensitivity");
+        cameraSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity", "Sensitivity text", "Camera Sensitivity", "Mouse Sensitivity");
+        aimSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity aim", "Sensitivity Aim text", "Aim Sensitivity");
+        invertMouseToggle = FindComponentOrChild<Toggle>("Invert Mose", "Invert Mouse");
+        invertMouseSlider = FindComponentOrChild<Slider>("Invert Mose", "Invert Mouse");
+        cameraSensitivityValueText = FindValueText("Sensitivity text");
+        aimSensitivityValueText = FindValueText("Sensitivity Aim text");
         bloomToggle = FindComponentOrChild<Toggle>("Bloom");
         motionBlurToggle = FindComponentOrChild<Toggle>("MotionBlur", "Motion Blur");
         depthOfFieldToggle = FindComponentOrChild<Toggle>("DepthOfField", "Depth Of Field", "DOF");
@@ -301,12 +390,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         ConfigurePostProcessingSlider(fullscreenSlider);
         ConfigureSensitivitySlider(cameraSensitivitySlider);
         ConfigureSensitivitySlider(aimSensitivitySlider);
+        ConfigurePostProcessingSlider(invertMouseSlider);
         ConfigurePostProcessingSlider(bloomSlider);
         ConfigurePostProcessingSlider(motionBlurSlider);
         ConfigurePostProcessingSlider(depthOfFieldSlider);
         ConfigurePostProcessingSlider(chromaticSlider);
         ConfigurePostProcessingSlider(filmGrainSlider);
         LoadAppliedValues();
+        SelectOptionTab(OptionTab.Graphics);
         suppressChangeDetection = false;
         SetPendingChanges(false);
     }
@@ -349,6 +440,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void RegisterListeners()
     {
+        ConfigureMenuRootHitAreas();
+        ConfigureTabHitAreas();
+        RegisterTabButton(graphicsTabButton, OptionTab.Graphics);
+        RegisterTabButton(controlTabButton, OptionTab.Control);
+        RegisterTabButton(audioTabButton, OptionTab.Audio);
+
         RegisterChangeListener(resolutionDropdown);
         RegisterChangeListener(qualityDropdown);
         RegisterChangeListener(shadowDropdown);
@@ -360,6 +457,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterPostProcessingSlider(fullscreenSlider);
         RegisterInstantSensitivityListener(cameraSensitivitySlider);
         RegisterInstantSensitivityListener(aimSensitivitySlider);
+        RegisterInstantInvertMouseListener(invertMouseToggle);
+        RegisterInstantInvertMouseListener(invertMouseSlider);
         RegisterChangeListener(bloomToggle);
         RegisterChangeListener(motionBlurToggle);
         RegisterChangeListener(depthOfFieldToggle);
@@ -378,25 +477,275 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             resumeButton.onClick.AddListener(ResumeGame);
         }
 
-        if (applyButton != null)
+        foreach (Button apply in FindComponentsOrChild<Button>("Apply"))
         {
-            applyButton.onClick.RemoveAllListeners();
-            applyButton.onClick.AddListener(ApplySettings);
+            apply.onClick.RemoveAllListeners();
+            apply.onClick.AddListener(ApplySettings);
         }
 
-        Button defaultButton = FindButtonByLabel("Default");
-        if (defaultButton != null)
+        RegisterResetButton(resetSensitivityButton);
+        foreach (Button defaultButton in FindButtonsByLabel("Default", "Reset", "Reset To Default", "Resret to Default"))
         {
-            defaultButton.onClick.RemoveAllListeners();
-            defaultButton.onClick.AddListener(ResetSensitivityToDefault);
+            RegisterResetButton(defaultButton);
         }
 
-        Button mainMenuButton = FindComponentOrChild<Button>("Main Menu", "MainMenu");
-        if (mainMenuButton != null)
+        foreach (Button mainMenuButton in FindComponentsOrChild<Button>("Main Menu", "MainMenu"))
         {
             mainMenuButton.onClick.RemoveAllListeners();
             mainMenuButton.onClick.AddListener(RequestReturnToMainMenu);
         }
+
+        RegisterCloseButton();
+    }
+
+    private void RegisterTabButton(Button button, OptionTab tab)
+    {
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => SelectOptionTab(tab));
+        }
+    }
+
+    private void ConfigureTabHitAreas()
+    {
+        DisableHighlightRaycasts(graphicsTabHighlight);
+        DisableHighlightRaycasts(controlTabHighlight);
+        DisableHighlightRaycasts(audioTabHighlight);
+    }
+
+    private void ConfigureMenuRootHitAreas()
+    {
+        DisableRootRaycast(graphicsMenu);
+        DisableRootRaycast(controlMenu);
+        DisableRootRaycast(audioMenu);
+    }
+
+    private static void DisableRootRaycast(GameObject root)
+    {
+        if (root != null && root.TryGetComponent(out Graphic graphic))
+        {
+            graphic.raycastTarget = false;
+        }
+    }
+
+    private static void DisableHighlightRaycasts(GameObject highlight)
+    {
+        if (highlight == null)
+        {
+            return;
+        }
+
+        foreach (Graphic graphic in highlight.GetComponentsInChildren<Graphic>(true))
+        {
+            graphic.raycastTarget = false;
+        }
+
+        foreach (Selectable selectable in highlight.GetComponentsInChildren<Selectable>(true))
+        {
+            selectable.interactable = false;
+        }
+    }
+
+    private void RegisterCloseButton()
+    {
+        if (closeButton != null)
+        {
+            closeButton.onClick.RemoveAllListeners();
+            closeButton.onClick.AddListener(ResumeGame);
+        }
+    }
+
+    private void RegisterResetButton(Button button)
+    {
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(ResetSensitivityToDefault);
+        }
+    }
+
+    private void RefreshOptionNavigation(bool selectDefault)
+    {
+        if (!autoConfigureOptionNavigation || optionPanel == null)
+        {
+            return;
+        }
+
+        optionNavigationSelectables.Clear();
+        foreach (Selectable selectable in optionPanel.GetComponentsInChildren<Selectable>(true))
+        {
+            if (!IsSelectableUsable(selectable))
+            {
+                continue;
+            }
+
+            optionNavigationSelectables.Add(selectable);
+        }
+
+        for (int i = 0; i < optionNavigationSelectables.Count; i++)
+        {
+            Selectable selectable = optionNavigationSelectables[i];
+            Navigation navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnUp = FindNearestSelectable(selectable, Vector2.up),
+                selectOnDown = FindNearestSelectable(selectable, Vector2.down),
+                selectOnLeft = FindNearestSelectable(selectable, Vector2.left),
+                selectOnRight = FindNearestSelectable(selectable, Vector2.right)
+            };
+            selectable.navigation = navigation;
+        }
+
+        if (selectDefault)
+        {
+            SelectDefaultOptionControl();
+        }
+    }
+
+    private static bool IsSelectableUsable(Selectable selectable)
+    {
+        return selectable != null
+            && selectable.gameObject.activeInHierarchy
+            && selectable.IsInteractable()
+            && selectable.TryGetComponent(out RectTransform _);
+    }
+
+    private Selectable FindNearestSelectable(Selectable from, Vector2 direction)
+    {
+        if (from == null || !from.TryGetComponent(out RectTransform fromRect))
+        {
+            return null;
+        }
+
+        Vector2 fromPosition = GetSelectablePosition(fromRect);
+        Selectable nearest = null;
+        float bestScore = float.PositiveInfinity;
+
+        for (int i = 0; i < optionNavigationSelectables.Count; i++)
+        {
+            Selectable candidate = optionNavigationSelectables[i];
+            if (candidate == from || candidate == null || !candidate.TryGetComponent(out RectTransform candidateRect))
+            {
+                continue;
+            }
+
+            Vector2 offset = GetSelectablePosition(candidateRect) - fromPosition;
+            float directionalDistance = Vector2.Dot(offset, direction);
+            if (directionalDistance <= 0.01f)
+            {
+                continue;
+            }
+
+            float perpendicularDistance = Mathf.Abs(Vector2.Dot(offset, new Vector2(-direction.y, direction.x)));
+            float score = directionalDistance + perpendicularDistance * 2.5f;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                nearest = candidate;
+            }
+        }
+
+        return nearest;
+    }
+
+    private static Vector2 GetSelectablePosition(RectTransform rectTransform)
+    {
+        Vector3[] corners = new Vector3[4];
+        rectTransform.GetWorldCorners(corners);
+        return (corners[0] + corners[2]) * 0.5f;
+    }
+
+    private void SelectDefaultOptionControl()
+    {
+        if (EventSystem.current == null)
+        {
+            return;
+        }
+
+        Selectable selectable = GetDefaultOptionSelectable();
+        if (selectable != null)
+        {
+            EventSystem.current.SetSelectedGameObject(selectable.gameObject);
+        }
+    }
+
+    private static void SelectFirstUsableControl(GameObject root)
+    {
+        if (EventSystem.current == null || root == null)
+        {
+            return;
+        }
+
+        foreach (Selectable selectable in root.GetComponentsInChildren<Selectable>(true))
+        {
+            if (IsSelectableUsable(selectable))
+            {
+                EventSystem.current.SetSelectedGameObject(selectable.gameObject);
+                return;
+            }
+        }
+    }
+
+    private Selectable GetDefaultOptionSelectable()
+    {
+        if (IsSelectableUsable(firstSelectedOption))
+        {
+            return firstSelectedOption;
+        }
+
+        if (selectedTab == OptionTab.Control && IsSelectableUsable(controlTabButton))
+        {
+            return controlTabButton;
+        }
+
+        if (selectedTab == OptionTab.Audio && IsSelectableUsable(audioTabButton))
+        {
+            return audioTabButton;
+        }
+
+        if (IsSelectableUsable(graphicsTabButton))
+        {
+            return graphicsTabButton;
+        }
+
+        return optionNavigationSelectables.Count > 0 ? optionNavigationSelectables[0] : null;
+    }
+
+    private void RestoreOptionSelectionIfNeeded()
+    {
+        if (!autoConfigureOptionNavigation || EventSystem.current == null)
+        {
+            return;
+        }
+
+        GameObject selectedObject = EventSystem.current.currentSelectedGameObject;
+        if (selectedObject != null && selectedObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        SelectDefaultOptionControl();
+    }
+
+    public void ShowGraphicsTab()
+    {
+        SelectOptionTab(OptionTab.Graphics);
+    }
+
+    public void ShowControlTab()
+    {
+        SelectOptionTab(OptionTab.Control);
+    }
+
+    public void ShowAudioTab()
+    {
+        SelectOptionTab(OptionTab.Audio);
+    }
+
+    public void CloseOptionsFromButton()
+    {
+        ResumeGame();
     }
 
     private void RegisterOptionInformationTargets()
@@ -418,6 +767,40 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         RegisterDefaultInfoTargets();
+    }
+
+    private void SelectOptionTab(OptionTab tab)
+    {
+        if (tab == OptionTab.Audio && audioMenu == null)
+        {
+            SetSelectedOptionInfo("Audio", "Audio controls are not available yet. Create an Audio menu or Sound menu under Option to enable this tab.", null);
+            return;
+        }
+
+        selectedTab = tab;
+
+        if (graphicsMenu != null) graphicsMenu.SetActive(tab == OptionTab.Graphics);
+        if (controlMenu != null) controlMenu.SetActive(tab == OptionTab.Control);
+        if (audioMenu != null) audioMenu.SetActive(tab == OptionTab.Audio);
+
+        if (graphicsTabHighlight != null) graphicsTabHighlight.SetActive(tab == OptionTab.Graphics);
+        if (controlTabHighlight != null) controlTabHighlight.SetActive(tab == OptionTab.Control);
+        if (audioTabHighlight != null) audioTabHighlight.SetActive(tab == OptionTab.Audio);
+
+        if (tab == OptionTab.Graphics)
+        {
+            SetSelectedOptionInfo("Graphics", "Select a graphics setting to see what it changes.", null);
+        }
+        else if (tab == OptionTab.Control)
+        {
+            SetSelectedOptionInfo("Controls", "View and adjust camera sensitivity, aim sensitivity, mouse inversion, and gameplay input references.", null);
+        }
+        else
+        {
+            SetSelectedOptionInfo("Audio", "Adjust master, music, and sound effect volume when the audio controls are available.", null);
+        }
+
+        RefreshOptionNavigation(optionsOpen);
     }
 
     private void RegisterDefaultInfoTargets()
@@ -474,12 +857,34 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             {
                 optionInformationEntries = controller.optionInformationEntries;
             }
+
+            CopySerializedOptionReference(controller);
         }
+    }
+
+    private void CopySerializedOptionReference(InGameOptionsMenu source)
+    {
+        if (graphicsMenu == null) graphicsMenu = source.graphicsMenu;
+        if (controlMenu == null) controlMenu = source.controlMenu;
+        if (audioMenu == null) audioMenu = source.audioMenu;
+        if (graphicsTabHighlight == null) graphicsTabHighlight = source.graphicsTabHighlight;
+        if (controlTabHighlight == null) controlTabHighlight = source.controlTabHighlight;
+        if (audioTabHighlight == null) audioTabHighlight = source.audioTabHighlight;
+        if (graphicsTabButton == null) graphicsTabButton = source.graphicsTabButton;
+        if (controlTabButton == null) controlTabButton = source.controlTabButton;
+        if (audioTabButton == null) audioTabButton = source.audioTabButton;
+        if (resetSensitivityButton == null) resetSensitivityButton = source.resetSensitivityButton;
+        if (closeButton == null) closeButton = source.closeButton;
     }
 
     private void AddInfoClick(Transform target, string title, string info, Sprite logo)
     {
-        if (target == null)
+        AddPointerClick(target, () => SetSelectedOptionInfo(title, info, logo), false);
+    }
+
+    private void AddPointerClick(Transform target, UnityEngine.Events.UnityAction action, bool replaceExisting)
+    {
+        if (target == null || action == null)
         {
             return;
         }
@@ -505,26 +910,33 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
             trigger.triggers.Add(clickEntry);
         }
+        else if (replaceExisting)
+        {
+            clickEntry.callback.RemoveAllListeners();
+        }
 
-        clickEntry.callback.AddListener(_ => SetSelectedOptionInfo(title, info, logo));
+        clickEntry.callback.AddListener(_ => action());
     }
 
     private void SetSelectedOptionInfo(string title, string info, Sprite logo)
     {
-        if (selectedOptionTitleText != null)
+        foreach (TMP_Text titleText in FindNamedComponents<TMP_Text>("Select Text"))
         {
-            selectedOptionTitleText.text = title;
+            titleText.text = title;
         }
 
-        if (selectedOptionInfoText != null)
+        foreach (TMP_Text infoText in FindNamedComponents<TMP_Text>("Information Text"))
         {
-            selectedOptionInfoText.text = info;
+            infoText.text = info;
         }
 
-        if (selectedOptionLogoImage != null && logo != null)
+        if (logo != null)
         {
-            selectedOptionLogoImage.sprite = logo;
-            selectedOptionLogoImage.enabled = true;
+            foreach (Image logoImage in FindInformationLogoImages())
+            {
+                logoImage.sprite = logo;
+                logoImage.enabled = true;
+            }
         }
     }
 
@@ -579,6 +991,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         optionPanel.SetActive(true);
         SetOptionPanelClosedPose();
+        RefreshOptionNavigation(true);
         optionAnimationRoutine = StartCoroutine(AnimateOptionPanel(true, false));
     }
 
@@ -662,6 +1075,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (opening)
         {
             SetOptionPanelOpenPose();
+            RefreshOptionNavigation(true);
         }
         else
         {
@@ -780,11 +1194,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetPendingChanges(false);
     }
 
-    private void ResetSensitivityToDefault()
+    public void ResetSensitivityToDefault()
     {
         SetSensitivityValue(cameraSensitivitySlider, DefaultCameraSensitivity);
         SetSensitivityValue(aimSensitivitySlider, DefaultAimSensitivity);
+        SetToggleValue(invertMouseToggle, false);
+        SetPostProcessingSliderValue(invertMouseSlider, false);
         ApplySensitivitySettings();
+        SetPendingChanges(false);
     }
 
     public void RequestReturnToMainMenu()
@@ -792,6 +1209,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (confirmationPanel != null)
         {
             confirmationPanel.SetActive(true);
+            SelectFirstUsableControl(confirmationPanel);
         }
         else
         {
@@ -812,6 +1230,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (confirmationPanel != null)
         {
             confirmationPanel.SetActive(false);
+            SelectDefaultOptionControl();
         }
     }
 
@@ -1153,14 +1572,18 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     {
         float cameraSensitivity = GetSensitivityValue(cameraSensitivitySlider);
         float aimSensitivity = GetSensitivityValue(aimSensitivitySlider);
+        bool invertMouse = GetPostProcessingControlValue(invertMouseToggle, invertMouseSlider);
 
         if (cameraControler != null)
         {
             cameraControler.SetPlayerSensitivityMultipliers(cameraSensitivity, aimSensitivity);
+            cameraControler.invertMouseY = invertMouse;
         }
 
         PlayerPrefs.SetFloat(CameraSensitivityKey, cameraSensitivity);
         PlayerPrefs.SetFloat(AimSensitivityKey, aimSensitivity);
+        PlayerPrefs.SetInt(InvertMouseKey, invertMouse ? 1 : 0);
+        UpdateSensitivityValueTexts();
         PlayerPrefs.Save();
     }
 
@@ -1198,6 +1621,20 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (slider != null)
         {
             slider.SetValueWithoutNotify(Mathf.Clamp(value, 0.1f, 5f));
+        }
+    }
+
+    private void UpdateSensitivityValueTexts()
+    {
+        SetSensitivityValueText(cameraSensitivityValueText, GetSensitivityValue(cameraSensitivitySlider));
+        SetSensitivityValueText(aimSensitivityValueText, GetSensitivityValue(aimSensitivitySlider));
+    }
+
+    private static void SetSensitivityValueText(TMP_Text text, float value)
+    {
+        if (text != null)
+        {
+            text.text = Mathf.RoundToInt(value * 100f).ToString();
         }
     }
 
@@ -1278,6 +1715,9 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         SetSensitivityValue(cameraSensitivitySlider, PlayerPrefs.GetFloat(CameraSensitivityKey, DefaultCameraSensitivity));
         SetSensitivityValue(aimSensitivitySlider, PlayerPrefs.GetFloat(AimSensitivityKey, DefaultAimSensitivity));
+        bool invertMouse = PlayerPrefs.GetInt(InvertMouseKey, 0) == 1;
+        SetToggleValue(invertMouseToggle, invertMouse);
+        SetPostProcessingSliderValue(invertMouseSlider, invertMouse);
         ApplySensitivitySettings();
 
         SetToggleValue(bloomToggle, PlayerPrefs.GetInt(BloomKey, 1) == 1);
@@ -1400,6 +1840,70 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         clickEntry.callback.AddListener(_ => TogglePostProcessingSlider(slider));
     }
 
+    private void RegisterInstantInvertMouseListener(Toggle toggle)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        toggle.onValueChanged.RemoveAllListeners();
+        toggle.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplySensitivitySettings();
+                SetPendingChanges(true);
+            }
+        });
+    }
+
+    private void RegisterInstantInvertMouseListener(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.onValueChanged.RemoveAllListeners();
+        slider.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplySensitivitySettings();
+                SetPendingChanges(true);
+            }
+        });
+
+        EventTrigger trigger = slider.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = slider.gameObject.AddComponent<EventTrigger>();
+        }
+
+        EventTrigger.Entry clickEntry = null;
+        for (int i = 0; i < trigger.triggers.Count; i++)
+        {
+            if (trigger.triggers[i].eventID == EventTriggerType.PointerClick)
+            {
+                clickEntry = trigger.triggers[i];
+                break;
+            }
+        }
+
+        if (clickEntry == null)
+        {
+            clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            trigger.triggers.Add(clickEntry);
+        }
+        else
+        {
+            clickEntry.callback.RemoveAllListeners();
+        }
+
+        clickEntry.callback.AddListener(_ => TogglePostProcessingSlider(slider));
+    }
+
     private void TogglePostProcessingSlider(Slider slider)
     {
         if (slider == null)
@@ -1439,6 +1943,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (applyImage != null)
         {
             applyImage.color = pending ? new Color(0.18f, 0.78f, 0.32f, 1f) : applyDefaultColor;
+        }
+
+        foreach (Button apply in FindComponentsOrChild<Button>("Apply"))
+        {
+            if (apply.targetGraphic is Image image)
+            {
+                image.color = pending ? new Color(0.18f, 0.78f, 0.32f, 1f) : applyDefaultColor;
+            }
         }
     }
 
@@ -1544,6 +2056,85 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         return null;
     }
 
+    private IEnumerable<T> FindComponentsOrChild<T>(params string[] objectNames) where T : Component
+    {
+        if (optionPanel == null || objectNames == null)
+        {
+            yield break;
+        }
+
+        foreach (string objectName in objectNames)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                continue;
+            }
+
+            foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+            {
+                if (transform.name != objectName)
+                {
+                    continue;
+                }
+
+                T component = transform.GetComponent<T>();
+                if (component != null)
+                {
+                    yield return component;
+                }
+
+                foreach (T childComponent in transform.GetComponentsInChildren<T>(true))
+                {
+                    if (childComponent != component)
+                    {
+                        yield return childComponent;
+                    }
+                }
+            }
+        }
+    }
+
+    private TMP_Text FindValueText(string containerName)
+    {
+        Transform container = FindTransform(containerName);
+        if (container == null)
+        {
+            return null;
+        }
+
+        foreach (TMP_Text text in container.GetComponentsInChildren<TMP_Text>(true))
+        {
+            if (text.transform.name == "Value Text")
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    private IEnumerable<T> FindNamedComponents<T>(string objectName) where T : Component
+    {
+        if (optionPanel == null || string.IsNullOrWhiteSpace(objectName))
+        {
+            yield break;
+        }
+
+        foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+        {
+            if (transform.name != objectName)
+            {
+                continue;
+            }
+
+            T component = transform.GetComponent<T>();
+            if (component != null)
+            {
+                yield return component;
+            }
+        }
+    }
+
     private Transform FindTransform(string objectName)
     {
         if (optionPanel == null || string.IsNullOrWhiteSpace(objectName))
@@ -1584,6 +2175,33 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         return FindComponentOrChild<Image>("Icon");
+    }
+
+    private IEnumerable<Image> FindInformationLogoImages()
+    {
+        if (optionPanel == null)
+        {
+            yield break;
+        }
+
+        foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+        {
+            if (transform.name != "Logo Select")
+            {
+                continue;
+            }
+
+            Transform icon = FindDirectChild(transform, "Icon");
+            if (icon != null && icon.TryGetComponent(out Image image))
+            {
+                yield return image;
+            }
+        }
+
+        if (selectedOptionLogoImage != null)
+        {
+            yield return selectedOptionLogoImage;
+        }
     }
 
     private static Transform FindDirectChild(Transform root, string childName)
@@ -1644,6 +2262,32 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         return null;
+    }
+
+    private IEnumerable<Button> FindButtonsByLabel(params string[] labels)
+    {
+        if (optionPanel == null || labels == null)
+        {
+            yield break;
+        }
+
+        foreach (Button button in optionPanel.GetComponentsInChildren<Button>(true))
+        {
+            TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+            if (text == null)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < labels.Length; i++)
+            {
+                if (string.Equals(text.text, labels[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return button;
+                    break;
+                }
+            }
+        }
     }
 
     private static IEnumerable<Component> FindVolumeComponents()
