@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,12 +9,18 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 {
     private const string ResolutionKey = "Graphics.Resolution";
     private const string QualityKey = "Graphics.Quality";
+    private const string QualityPresetKey = "Graphics.QualityPreset";
     private const string ShadowKey = "Graphics.Shadows";
     private const string AntiAliasingKey = "Graphics.AntiAliasing";
     private const string TextureKey = "Graphics.TextureQuality";
     private const string VSyncKey = "Graphics.VSync";
     private const string FullscreenKey = "Graphics.Fullscreen";
     private const string FieldOfViewKey = "Graphics.FieldOfView";
+    private const int QualityPresetLow = 0;
+    private const int QualityPresetMedium = 1;
+    private const int QualityPresetHigh = 2;
+    private const int QualityPresetUltra = 3;
+    private const int QualityPresetCustom = 4;
 
     [Header("UI")]
     [SerializeField] private TMP_Dropdown resolutionDropdown;
@@ -28,6 +35,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     [SerializeField] private Toggle motionBlurToggle;
     [SerializeField] private Slider fovSlider;
     [SerializeField] private Component postProcessingVolume;
+    [SerializeField] private PostProcessingSettings postProcessingSettings;
 
     private readonly List<Resolution> availableResolutions = new();
     private bool initialized;
@@ -71,6 +79,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         PopulateShadowOptions();
         PopulateAntiAliasingOptions();
         PopulateTextureQualityOptions();
+        RegisterQualityPresetListener();
+        RegisterManualQualityListeners();
         RestoreSavedValues();
         PreviewFieldOfView();
         initialized = true;
@@ -82,8 +92,11 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         if (graphicsDropdown != null)
         {
-            QualitySettings.SetQualityLevel(graphicsDropdown.value, true);
-            PlayerPrefs.SetInt(QualityKey, graphicsDropdown.value);
+            int preset = Mathf.Clamp(graphicsDropdown.value, QualityPresetLow, QualityPresetCustom);
+            int qualityLevel = GetUnityQualityLevelForPreset(preset);
+            QualitySettings.SetQualityLevel(qualityLevel, true);
+            PlayerPrefs.SetInt(QualityPresetKey, preset);
+            PlayerPrefs.SetInt(QualityKey, qualityLevel);
         }
 
         if (shadowDropdown != null)
@@ -133,6 +146,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     {
         PlayerPrefs.DeleteKey(ResolutionKey);
         PlayerPrefs.DeleteKey(QualityKey);
+        PlayerPrefs.DeleteKey(QualityPresetKey);
         PlayerPrefs.DeleteKey(ShadowKey);
         PlayerPrefs.DeleteKey(AntiAliasingKey);
         PlayerPrefs.DeleteKey(TextureKey);
@@ -194,7 +208,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         graphicsDropdown.ClearOptions();
-        graphicsDropdown.AddOptions(new List<string>(QualitySettings.names));
+        graphicsDropdown.AddOptions(GetQualityPresetLabels());
     }
 
     private void PopulateShadowOptions()
@@ -230,11 +244,201 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         textureDropdown.AddOptions(new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
     }
 
+    private void RegisterQualityPresetListener()
+    {
+        if (graphicsDropdown == null)
+        {
+            return;
+        }
+
+        graphicsDropdown.onValueChanged.AddListener(value => ApplyQualityPresetToControls(value, false));
+    }
+
+    private void RegisterManualQualityListeners()
+    {
+        if (shadowDropdown != null) shadowDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (aaDropdown != null) aaDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (textureDropdown != null) textureDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (vSyncToggle != null) vSyncToggle.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (vSyncSlider != null) vSyncSlider.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+    }
+
+    private void SetQualityPresetCustom()
+    {
+        if (graphicsDropdown != null && graphicsDropdown.options.Count > QualityPresetCustom && graphicsDropdown.value != QualityPresetCustom)
+        {
+            graphicsDropdown.SetValueWithoutNotify(QualityPresetCustom);
+        }
+    }
+
+    private void ApplyQualityPresetToControls(int presetIndex, bool updateDropdown)
+    {
+        if (presetIndex == QualityPresetCustom)
+        {
+            if (updateDropdown)
+            {
+                SetDropdownValue(graphicsDropdown, QualityPresetCustom);
+            }
+
+            return;
+        }
+
+        int preset = Mathf.Clamp(presetIndex, QualityPresetLow, QualityPresetUltra);
+        if (updateDropdown)
+        {
+            SetDropdownValue(graphicsDropdown, preset);
+        }
+
+        switch (preset)
+        {
+            case QualityPresetLow:
+                SetDropdownValue(shadowDropdown, 0);
+                SetDropdownValue(aaDropdown, FindAntiAliasingOption("Off", "None", "Disabled"));
+                SetDropdownValue(textureDropdown, 2);
+                SetToggleValue(vSyncToggle, false);
+                SetBinarySliderValue(vSyncSlider, false);
+                SetPostProcessingPreset(false, false, false, false, false);
+                break;
+            case QualityPresetMedium:
+                SetDropdownValue(shadowDropdown, 1);
+                SetDropdownValue(aaDropdown, FindAntiAliasingOption("FXAA", "MSAA 2x", "2x", "Off"));
+                SetDropdownValue(textureDropdown, 1);
+                SetToggleValue(vSyncToggle, false);
+                SetBinarySliderValue(vSyncSlider, false);
+                SetPostProcessingPreset(true, false, false, false, false);
+                break;
+            case QualityPresetHigh:
+                SetDropdownValue(shadowDropdown, 2);
+                SetDropdownValue(aaDropdown, FindAntiAliasingOption("TAA", "MSAA 4x", "4x", "FXAA"));
+                SetDropdownValue(textureDropdown, 0);
+                SetToggleValue(vSyncToggle, true);
+                SetBinarySliderValue(vSyncSlider, true);
+                SetPostProcessingPreset(true, false, true, true, false);
+                break;
+            case QualityPresetUltra:
+                SetDropdownValue(shadowDropdown, 2);
+                SetDropdownValue(aaDropdown, FindAntiAliasingOption("TAA", "MSAA 8x", "8x", "MSAA 4x", "4x"));
+                SetDropdownValue(textureDropdown, 0);
+                SetToggleValue(vSyncToggle, true);
+                SetBinarySliderValue(vSyncSlider, true);
+                SetPostProcessingPreset(true, true, true, true, true);
+                break;
+        }
+    }
+
+    private void SetPostProcessingPreset(bool bloom, bool motionBlur, bool depthOfField, bool chromaticAberration, bool filmGrain)
+    {
+        if (postProcessingSettings == null)
+        {
+            postProcessingSettings = GetComponent<PostProcessingSettings>();
+        }
+
+        postProcessingSettings?.SetControlValues(bloom, motionBlur, depthOfField, chromaticAberration, filmGrain);
+    }
+
+    private static List<string> GetQualityPresetLabels()
+    {
+        return new List<string> { "Low", "Medium", "High", "Ultra", "Custom" };
+    }
+
+    private static int DetectRecommendedQualityPreset()
+    {
+        if (SystemInfo.graphicsMemorySize < 1024 || SystemInfo.systemMemorySize < 4096 || SystemInfo.graphicsShaderLevel < 35)
+        {
+            return QualityPresetLow;
+        }
+
+        int score = 0;
+        if (SystemInfo.systemMemorySize >= 16000) score += 2;
+        else if (SystemInfo.systemMemorySize >= 8000) score += 1;
+
+        if (SystemInfo.graphicsMemorySize >= 8000) score += 3;
+        else if (SystemInfo.graphicsMemorySize >= 4000) score += 2;
+        else if (SystemInfo.graphicsMemorySize >= 2000) score += 1;
+
+        if (SystemInfo.processorCount >= 8) score += 2;
+        else if (SystemInfo.processorCount >= 4) score += 1;
+
+        if (SystemInfo.graphicsShaderLevel >= 50) score += 2;
+        else if (SystemInfo.graphicsShaderLevel >= 45) score += 1;
+
+        if (score >= 8) return QualityPresetUltra;
+        if (score >= 5) return QualityPresetHigh;
+        if (score >= 3) return QualityPresetMedium;
+        return QualityPresetLow;
+    }
+
+    private static int GetUnityQualityLevelForPreset(int presetIndex)
+    {
+        if (QualitySettings.names == null || QualitySettings.names.Length == 0)
+        {
+            return 0;
+        }
+
+        return presetIndex switch
+        {
+            QualityPresetLow => FindUnityQualityLevel("Low", "Very Low", "Performant", "Performance"),
+            QualityPresetMedium => FindUnityQualityLevel("Medium", "Balanced"),
+            QualityPresetHigh => FindUnityQualityLevel("High", "Beautiful"),
+            QualityPresetUltra => FindUnityQualityLevel("Ultra", "Very High", "Fantastic"),
+            _ => Mathf.Clamp(PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()), 0, QualitySettings.names.Length - 1)
+        };
+    }
+
+    private static int FindUnityQualityLevel(params string[] preferredNames)
+    {
+        for (int p = 0; p < preferredNames.Length; p++)
+        {
+            for (int i = 0; i < QualitySettings.names.Length; i++)
+            {
+                if (QualitySettings.names[i].IndexOf(preferredNames[p], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        if (preferredNames.Length > 0 && preferredNames[0].IndexOf("low", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return 0;
+        }
+
+        if (preferredNames.Length > 0 && preferredNames[0].IndexOf("medium", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return Mathf.Clamp(QualitySettings.names.Length / 2, 0, QualitySettings.names.Length - 1);
+        }
+
+        return QualitySettings.names.Length - 1;
+    }
+
+    private int FindAntiAliasingOption(params string[] preferredLabels)
+    {
+        if (aaDropdown == null || aaDropdown.options.Count == 0)
+        {
+            return 0;
+        }
+
+        for (int p = 0; p < preferredLabels.Length; p++)
+        {
+            for (int i = 0; i < aaDropdown.options.Count; i++)
+            {
+                if (aaDropdown.options[i].text.IndexOf(preferredLabels[p], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return AntiAliasingSettingsUtility.GetDefaultOptionIndex();
+    }
+
     private void RestoreSavedValues()
     {
+        bool hasSavedPreset = PlayerPrefs.HasKey(QualityPresetKey);
+        int preset = PlayerPrefs.GetInt(QualityPresetKey, DetectRecommendedQualityPreset());
         if (graphicsDropdown != null)
         {
-            graphicsDropdown.SetValueWithoutNotify(Mathf.Clamp(PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()), 0, Mathf.Max(0, graphicsDropdown.options.Count - 1)));
+            graphicsDropdown.SetValueWithoutNotify(Mathf.Clamp(preset, 0, Mathf.Max(0, graphicsDropdown.options.Count - 1)));
         }
 
         if (shadowDropdown != null)
@@ -277,6 +481,11 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             int savedIndex = PlayerPrefs.GetInt(ResolutionKey, FindCurrentResolutionIndex());
             resolutionDropdown.SetValueWithoutNotify(Mathf.Clamp(savedIndex, 0, availableResolutions.Count - 1));
         }
+
+        if (!hasSavedPreset && preset != QualityPresetCustom)
+        {
+            ApplyQualityPresetToControls(preset, false);
+        }
     }
 
     private void ApplyResolution()
@@ -314,6 +523,22 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         slider.maxValue = 1f;
         slider.wholeNumbers = true;
         slider.SetValueWithoutNotify(active ? 0f : 1f);
+    }
+
+    private static void SetDropdownValue(TMP_Dropdown dropdown, int value)
+    {
+        if (dropdown != null && dropdown.options.Count > 0)
+        {
+            dropdown.SetValueWithoutNotify(Mathf.Clamp(value, 0, dropdown.options.Count - 1));
+        }
+    }
+
+    private static void SetToggleValue(Toggle toggle, bool value)
+    {
+        if (toggle != null)
+        {
+            toggle.SetIsOnWithoutNotify(value);
+        }
     }
 
     private int FindCurrentResolutionIndex()

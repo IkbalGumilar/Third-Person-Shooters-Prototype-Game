@@ -78,6 +78,15 @@ public sealed class PostProcessingSettings : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    public void SetControlValues(bool bloom, bool motionBlur, bool depthOfField, bool chromaticAberration, bool filmGrain)
+    {
+        SetControlValue(bloomToggle, bloomSlider, bloom);
+        SetControlValue(motionBlurToggle, motionBlurSlider, motionBlur);
+        SetControlValue(dofToggle, dofSlider, depthOfField);
+        SetControlValue(chromaticAberrationToggle, chromaticAberrationSlider, chromaticAberration);
+        SetControlValue(filmGrainToggle, filmGrainSlider, filmGrain);
+    }
+
     private void CacheDefaultStates()
     {
         foreach (object component in GetPostProcessingComponents())
@@ -147,6 +156,22 @@ public sealed class PostProcessingSettings : MonoBehaviour
             }
         }
 
+    }
+
+    private static void SetControlValue(Toggle toggle, Slider slider, bool active)
+    {
+        if (toggle != null)
+        {
+            toggle.SetIsOnWithoutNotify(active);
+        }
+
+        if (slider != null)
+        {
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = true;
+            slider.SetValueWithoutNotify(active ? 0f : 1f);
+        }
     }
 
     public void ResetToDefault()

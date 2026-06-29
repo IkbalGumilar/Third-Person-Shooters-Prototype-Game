@@ -10,6 +10,7 @@ using UnityEngine.UI;
 public sealed class UIAudioController : MonoBehaviour
 {
     private static UIAudioController instance;
+    private static float globalVolumeMultiplier = 1f;
 
     [Header("Clips")]
     [SerializeField] private AudioClip[] selectClips;
@@ -143,6 +144,11 @@ public sealed class UIAudioController : MonoBehaviour
         PlayRandom(changeClips, changeVolume);
     }
 
+    public static void SetGlobalVolume(float volume)
+    {
+        globalVolumeMultiplier = Mathf.Clamp01(volume);
+    }
+
     private void BindSelectable(Selectable selectable)
     {
         AddPointerEvents(selectable);
@@ -208,7 +214,7 @@ public sealed class UIAudioController : MonoBehaviour
         }
 
         audioSource.pitch = Random.Range(Mathf.Min(pitchRange.x, pitchRange.y), Mathf.Max(pitchRange.x, pitchRange.y));
-        audioSource.PlayOneShot(clip, volume);
+        audioSource.PlayOneShot(clip, volume * globalVolumeMultiplier);
     }
 
     private void EnsureAudioSource()

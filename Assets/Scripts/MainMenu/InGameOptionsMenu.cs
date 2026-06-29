@@ -35,6 +35,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private const string MainMenuSceneName = "MainMenu";
     private const string ResolutionKey = "Graphics.Resolution";
     private const string QualityKey = "Graphics.Quality";
+    private const string QualityPresetKey = "Graphics.QualityPreset";
     private const string ShadowKey = "Graphics.Shadows";
     private const string AntiAliasingKey = "Graphics.AntiAliasing";
     private const string TextureKey = "Graphics.TextureQuality";
@@ -57,6 +58,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private const float OptionsClosedChildScale = 0.2f;
     private const float OptionsOpenDuration = 0.28f;
     private const float OptionsCloseDuration = 0.22f;
+    private const int QualityPresetLow = 0;
+    private const int QualityPresetMedium = 1;
+    private const int QualityPresetHigh = 2;
+    private const int QualityPresetUltra = 3;
+    private const int QualityPresetCustom = 4;
 
     private GameObject optionPanel;
     private RectTransform optionPanelRect;
@@ -85,6 +91,19 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private Slider depthOfFieldSlider;
     private Slider chromaticSlider;
     private Slider filmGrainSlider;
+    private Slider masterVolumeSlider;
+    private Slider musicVolumeSlider;
+    private Slider sfxVolumeSlider;
+    private Slider uiVolumeSlider;
+    private TMP_Dropdown audioMixerDropdown;
+    private TMP_Dropdown audioLanguageDropdown;
+    private TMP_Dropdown audioSpeakerModeDropdown;
+    private Toggle audioMuteToggle;
+    private Slider audioMuteSlider;
+    private TMP_Text masterVolumeValueText;
+    private TMP_Text musicVolumeValueText;
+    private TMP_Text sfxVolumeValueText;
+    private TMP_Text uiVolumeValueText;
     private Button applyButton;
     private TMP_Text selectedOptionTitleText;
     private TMP_Text selectedOptionInfoText;
@@ -97,6 +116,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private Image applyImage;
     private GraphicsSettingsManager sharedGraphicsSettings;
     private PostProcessingSettings sharedPostProcessingSettings;
+    private AudioSettingsManager sharedAudioSettings;
     private ResourceUsageDisplay resourceUsageDisplay;
     private Color applyDefaultColor;
     [Header("Option Tabs")]
@@ -360,6 +380,19 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         depthOfFieldSlider = FindComponentOrChild<Slider>("DepthOfField", "Depth Of Field", "DOF");
         chromaticSlider = FindComponentOrChild<Slider>("Chromatic", "Chromatic Aberration");
         filmGrainSlider = FindComponentOrChild<Slider>("FilmGrain", "Film Grain", "Film Gain");
+        masterVolumeSlider = FindAudioComponentOrChild<Slider>("Master Volume text", "Master Volume", "Master");
+        musicVolumeSlider = FindAudioComponentOrChild<Slider>("Music Volume text", "Music Volume", "Music");
+        sfxVolumeSlider = FindAudioComponentOrChild<Slider>("Sound Effect Volume text", "Sound Volume text", "SFX Volume text", "Sound Tab", "SFX", "Sound");
+        uiVolumeSlider = FindAudioComponentOrChild<Slider>("UI Volume text", "UI Volume", "UI");
+        audioMixerDropdown = FindAudioComponentOrChild<TMP_Dropdown>("Mixer Text", "Mixer", "Audio Mixer");
+        audioLanguageDropdown = FindAudioComponentOrChild<TMP_Dropdown>("Audio Language", "Language");
+        audioSpeakerModeDropdown = FindAudioComponentOrChild<TMP_Dropdown>("Speaker Configuration", "Speaker", "Speaker Mode");
+        audioMuteToggle = FindAudioComponentOrChild<Toggle>("Mute", "Mute When Unfocus", "Mute When Unfocused");
+        audioMuteSlider = FindAudioComponentOrChild<Slider>("Mute", "Mute When Unfocus", "Mute When Unfocused");
+        masterVolumeValueText = FindAudioValueText("Master Volume text", "Master Volume", "Master");
+        musicVolumeValueText = FindAudioValueText("Music Volume text", "Music Volume", "Music");
+        sfxVolumeValueText = FindAudioValueText("Sound Effect Volume text", "Sound Volume text", "SFX Volume text", "Sound Tab", "SFX", "Sound");
+        uiVolumeValueText = FindAudioValueText("UI Volume text", "UI Volume", "UI");
         applyButton = FindComponentOrChild<Button>("Apply");
         selectedOptionTitleText = FindComponentOrChild<TMP_Text>("Select Text");
         selectedOptionInfoText = FindComponentOrChild<TMP_Text>("Information Text");
@@ -382,7 +415,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     {
         suppressChangeDetection = true;
         PopulateResolutions();
-        PopulateDropdown(qualityDropdown, new List<string>(QualitySettings.names));
+        PopulateDropdown(qualityDropdown, GetQualityPresetLabels());
         PopulateDropdown(shadowDropdown, new List<string> { "Off", "Hard Shadows", "All Shadows" });
         PopulateDropdown(antiAliasingDropdown, AntiAliasingSettingsUtility.GetOptionLabels());
         PopulateDropdown(textureDropdown, new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
@@ -436,6 +469,15 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         sharedPostProcessingSettings.ConfigureForOptions(volume, bloomToggle, motionBlurToggle, depthOfFieldToggle, chromaticToggle, filmGrainToggle,
             bloomSlider, motionBlurSlider, depthOfFieldSlider, chromaticSlider, filmGrainSlider);
+
+        sharedAudioSettings = optionPanel.GetComponent<AudioSettingsManager>();
+        if (sharedAudioSettings == null)
+        {
+            sharedAudioSettings = optionPanel.AddComponent<AudioSettingsManager>();
+        }
+
+        sharedAudioSettings.ConfigureForOptions(audioMenu, masterVolumeSlider, musicVolumeSlider, sfxVolumeSlider, uiVolumeSlider,
+            masterVolumeValueText, musicVolumeValueText, sfxVolumeValueText, uiVolumeValueText, audioMixerDropdown, audioLanguageDropdown, audioSpeakerModeDropdown, audioMuteToggle, audioMuteSlider);
     }
 
     private void RegisterListeners()
@@ -447,28 +489,46 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterTabButton(audioTabButton, OptionTab.Audio);
 
         RegisterChangeListener(resolutionDropdown);
-        RegisterChangeListener(qualityDropdown);
-        RegisterChangeListener(shadowDropdown);
-        RegisterChangeListener(antiAliasingDropdown);
-        RegisterChangeListener(textureDropdown);
-        RegisterChangeListener(vSyncToggle);
+        RegisterQualityPresetListener(qualityDropdown);
+        RegisterGraphicsManualChangeListener(shadowDropdown);
+        RegisterGraphicsManualChangeListener(antiAliasingDropdown);
+        RegisterGraphicsManualChangeListener(textureDropdown);
+        RegisterDropdownArrows(resolutionDropdown, "Resolusi", "Resolution", "Resolution text");
+        RegisterDropdownArrows(qualityDropdown, "Grafik Quality", "Quality", "Quality Preset", "Quality Preset text");
+        RegisterDropdownArrows(shadowDropdown, "Shadow", "Shadow Quality", "Shadow Quality text");
+        RegisterDropdownArrows(antiAliasingDropdown, "Anti-Aliasing", "Anti-Aliasing text");
+        RegisterDropdownArrows(textureDropdown, "TextureQuality", "Texture Quality", "Texture Quality text");
+        RegisterGraphicsManualChangeListener(vSyncToggle);
         RegisterChangeListener(fullscreenToggle);
-        RegisterPostProcessingSlider(vSyncSlider);
+        RegisterGraphicsManualPostProcessingSlider(vSyncSlider);
         RegisterPostProcessingSlider(fullscreenSlider);
         RegisterInstantSensitivityListener(cameraSensitivitySlider);
         RegisterInstantSensitivityListener(aimSensitivitySlider);
         RegisterInstantInvertMouseListener(invertMouseToggle);
         RegisterInstantInvertMouseListener(invertMouseSlider);
-        RegisterChangeListener(bloomToggle);
-        RegisterChangeListener(motionBlurToggle);
-        RegisterChangeListener(depthOfFieldToggle);
-        RegisterChangeListener(chromaticToggle);
-        RegisterChangeListener(filmGrainToggle);
-        RegisterPostProcessingSlider(bloomSlider);
-        RegisterPostProcessingSlider(motionBlurSlider);
-        RegisterPostProcessingSlider(depthOfFieldSlider);
-        RegisterPostProcessingSlider(chromaticSlider);
-        RegisterPostProcessingSlider(filmGrainSlider);
+        RegisterGraphicsManualChangeListener(bloomToggle);
+        RegisterGraphicsManualChangeListener(motionBlurToggle);
+        RegisterGraphicsManualChangeListener(depthOfFieldToggle);
+        RegisterGraphicsManualChangeListener(chromaticToggle);
+        RegisterGraphicsManualChangeListener(filmGrainToggle);
+        RegisterGraphicsManualPostProcessingSlider(bloomSlider);
+        RegisterGraphicsManualPostProcessingSlider(motionBlurSlider);
+        RegisterGraphicsManualPostProcessingSlider(depthOfFieldSlider);
+        RegisterGraphicsManualPostProcessingSlider(chromaticSlider);
+        RegisterGraphicsManualPostProcessingSlider(filmGrainSlider);
+        RegisterInstantAudioListener(masterVolumeSlider);
+        RegisterInstantAudioListener(musicVolumeSlider);
+        RegisterInstantAudioListener(sfxVolumeSlider);
+        RegisterInstantAudioListener(uiVolumeSlider);
+        RegisterInstantAudioListener(audioMixerDropdown);
+        RegisterInstantAudioListener(audioLanguageDropdown);
+        RegisterInstantAudioListener(audioSpeakerModeDropdown);
+        RegisterInstantAudioListener(audioMuteToggle);
+        RegisterInstantAudioListener(audioMuteSlider);
+        RegisterAudioBinarySlider(audioMuteSlider);
+        RegisterDropdownArrows(audioMixerDropdown, "Mixer Text", "Mixer", "Audio Mixer");
+        RegisterDropdownArrows(audioLanguageDropdown, "Audio Language", "Language");
+        RegisterDropdownArrows(audioSpeakerModeDropdown, "Speaker Configuration", "Speaker", "Speaker Mode");
 
         Button resumeButton = FindComponentOrChild<Button>("Resume", "Back");
         if (resumeButton != null)
@@ -561,7 +621,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(ResetSensitivityToDefault);
+            button.onClick.AddListener(ResetCurrentTabToDefault);
         }
     }
 
@@ -1190,6 +1250,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         ApplyEngineSettings();
         ApplySensitivitySettings();
         ApplyPostProcessingSettings();
+        ApplyAudioSettings();
         PlayerPrefs.Save();
         SetPendingChanges(false);
     }
@@ -1202,6 +1263,36 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetPostProcessingSliderValue(invertMouseSlider, false);
         ApplySensitivitySettings();
         SetPendingChanges(false);
+    }
+
+    public void ResetCurrentTabToDefault()
+    {
+        if (selectedTab == OptionTab.Audio)
+        {
+            if (sharedAudioSettings != null)
+            {
+                sharedAudioSettings.ResetToDefault();
+            }
+
+            SetPendingChanges(false);
+            return;
+        }
+
+        if (selectedTab == OptionTab.Control)
+        {
+            ResetSensitivityToDefault();
+            return;
+        }
+
+        if (selectedTab == OptionTab.Graphics)
+        {
+            sharedGraphicsSettings?.ResetToDefault();
+            sharedPostProcessingSettings?.ResetToDefault();
+            suppressChangeDetection = true;
+            LoadAppliedValues();
+            suppressChangeDetection = false;
+            SetPendingChanges(false);
+        }
     }
 
     public void RequestReturnToMainMenu()
@@ -1530,8 +1621,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         if (qualityDropdown != null)
         {
-            QualitySettings.SetQualityLevel(Mathf.Clamp(qualityDropdown.value, 0, Mathf.Max(0, QualitySettings.names.Length - 1)), true);
-            PlayerPrefs.SetInt(QualityKey, qualityDropdown.value);
+            int preset = Mathf.Clamp(qualityDropdown.value, QualityPresetLow, QualityPresetCustom);
+            int qualityLevel = GetUnityQualityLevelForPreset(preset);
+            QualitySettings.SetQualityLevel(qualityLevel, true);
+            PlayerPrefs.SetInt(QualityPresetKey, preset);
+            PlayerPrefs.SetInt(QualityKey, qualityLevel);
         }
 
         if (shadowDropdown != null)
@@ -1670,6 +1764,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         ApplyEffect("FilmGrain", filmGrainToggle, filmGrainSlider, FilmGrainKey, "Grain");
     }
 
+    private void ApplyAudioSettings()
+    {
+        if (sharedAudioSettings != null)
+        {
+            sharedAudioSettings.ApplySettings();
+        }
+    }
+
     private void ApplyEffect(string primaryName, Toggle toggle, Slider slider, string preferenceKey, string alternateName = null)
     {
         if (toggle == null && slider == null)
@@ -1702,7 +1804,9 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private void LoadAppliedValues()
     {
         SetDropdownValue(resolutionDropdown, PlayerPrefs.GetInt(ResolutionKey, FindCurrentResolutionIndex()));
-        SetDropdownValue(qualityDropdown, PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()));
+        bool hasSavedPreset = PlayerPrefs.HasKey(QualityPresetKey);
+        int preset = PlayerPrefs.GetInt(QualityPresetKey, DetectRecommendedQualityPreset());
+        SetDropdownValue(qualityDropdown, preset);
         SetDropdownValue(shadowDropdown, PlayerPrefs.GetInt(ShadowKey, (int)QualitySettings.shadows));
 
         int aaDefault = AntiAliasingSettingsUtility.GetDefaultOptionIndex();
@@ -1730,6 +1834,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetPostProcessingSliderValue(depthOfFieldSlider, PlayerPrefs.GetInt(DepthOfFieldKey, 1) == 1);
         SetPostProcessingSliderValue(chromaticSlider, PlayerPrefs.GetInt(ChromaticAberrationKey, 1) == 1);
         SetPostProcessingSliderValue(filmGrainSlider, PlayerPrefs.GetInt(FilmGrainKey, 1) == 1);
+
+        if (!hasSavedPreset && preset != QualityPresetCustom)
+        {
+            ApplyQualityPresetToControls(preset, false);
+        }
     }
 
     private void PopulateResolutions()
@@ -1792,6 +1901,48 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
     }
 
+    private void RegisterQualityPresetListener(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null)
+        {
+            return;
+        }
+
+        dropdown.onValueChanged.RemoveAllListeners();
+        dropdown.onValueChanged.AddListener(value =>
+        {
+            if (suppressChangeDetection)
+            {
+                return;
+            }
+
+            ApplyQualityPresetToControls(value, true);
+            NotifyChanged();
+        });
+    }
+
+    private void RegisterGraphicsManualChangeListener(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null)
+        {
+            return;
+        }
+
+        dropdown.onValueChanged.RemoveAllListeners();
+        dropdown.onValueChanged.AddListener(_ => NotifyGraphicsManualChanged());
+    }
+
+    private void RegisterGraphicsManualChangeListener(Toggle toggle)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        toggle.onValueChanged.RemoveAllListeners();
+        toggle.onValueChanged.AddListener(_ => NotifyGraphicsManualChanged());
+    }
+
     private void RegisterChangeListener(Slider slider)
     {
         if (slider != null)
@@ -1803,13 +1954,33 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void RegisterPostProcessingSlider(Slider slider)
     {
+        RegisterPostProcessingSlider(slider, false);
+    }
+
+    private void RegisterGraphicsManualPostProcessingSlider(Slider slider)
+    {
+        RegisterPostProcessingSlider(slider, true);
+    }
+
+    private void RegisterPostProcessingSlider(Slider slider, bool marksQualityCustom)
+    {
         if (slider == null)
         {
             return;
         }
 
         slider.onValueChanged.RemoveAllListeners();
-        slider.onValueChanged.AddListener(_ => NotifyChanged());
+        slider.onValueChanged.AddListener(_ =>
+        {
+            if (marksQualityCustom)
+            {
+                NotifyGraphicsManualChanged();
+            }
+            else
+            {
+                NotifyChanged();
+            }
+        });
 
         EventTrigger trigger = slider.GetComponent<EventTrigger>();
         if (trigger == null)
@@ -1929,12 +2100,421 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
     }
 
+    private void RegisterInstantAudioListener(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.onValueChanged.RemoveAllListeners();
+        slider.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplyAudioSettings();
+            }
+        });
+    }
+
+    private void RegisterInstantAudioListener(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null)
+        {
+            return;
+        }
+
+        dropdown.onValueChanged.RemoveAllListeners();
+        dropdown.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplyAudioSettings();
+            }
+        });
+    }
+
+    private void RegisterInstantAudioListener(Toggle toggle)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        toggle.onValueChanged.RemoveAllListeners();
+        toggle.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplyAudioSettings();
+            }
+        });
+    }
+
+    private void RegisterAudioBinarySlider(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = true;
+
+        EventTrigger trigger = slider.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = slider.gameObject.AddComponent<EventTrigger>();
+        }
+
+        bool wasActiveBeforeClick = slider.value < 0.5f;
+        EventTrigger.Entry downEntry = null;
+        EventTrigger.Entry clickEntry = null;
+        for (int i = 0; i < trigger.triggers.Count; i++)
+        {
+            if (trigger.triggers[i].eventID == EventTriggerType.PointerDown)
+            {
+                downEntry = trigger.triggers[i];
+            }
+
+            if (trigger.triggers[i].eventID == EventTriggerType.PointerClick)
+            {
+                clickEntry = trigger.triggers[i];
+            }
+        }
+
+        if (downEntry == null)
+        {
+            downEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+            trigger.triggers.Add(downEntry);
+        }
+        else
+        {
+            downEntry.callback.RemoveAllListeners();
+        }
+
+        downEntry.callback.AddListener(_ => wasActiveBeforeClick = slider.value < 0.5f);
+
+        if (clickEntry == null)
+        {
+            clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            trigger.triggers.Add(clickEntry);
+        }
+        else
+        {
+            clickEntry.callback.RemoveAllListeners();
+        }
+
+        clickEntry.callback.AddListener(_ =>
+        {
+            slider.value = wasActiveBeforeClick ? 1f : 0f;
+            ApplyAudioSettings();
+        });
+    }
+
+    private void RegisterDropdownArrows(TMP_Dropdown dropdown, params string[] containerNames)
+    {
+        if (dropdown == null || containerNames == null)
+        {
+            return;
+        }
+
+        foreach (Transform container in FindTransforms(containerNames))
+        {
+            foreach (Transform candidate in container.GetComponentsInChildren<Transform>(true))
+            {
+                int direction = GetDropdownArrowDirection(candidate, dropdown.transform);
+                if (direction == 0)
+                {
+                    continue;
+                }
+
+                Button button = GetOrCreateArrowButton(candidate, container);
+                if (button == null || button.GetComponent<TMP_Dropdown>() == dropdown)
+                {
+                    continue;
+                }
+
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(() => StepDropdownValue(dropdown, direction));
+            }
+        }
+    }
+
+    private static Button GetOrCreateArrowButton(Transform arrow, Transform container)
+    {
+        if (arrow == null || container == null)
+        {
+            return null;
+        }
+
+        Button button = arrow.GetComponent<Button>();
+        if (button == null)
+        {
+            button = arrow.GetComponentInParent<Button>(true);
+            if (button != null && !button.transform.IsChildOf(container))
+            {
+                button = null;
+            }
+        }
+
+        if (button == null)
+        {
+            button = arrow.gameObject.AddComponent<Button>();
+            if (arrow.TryGetComponent(out Graphic graphic))
+            {
+                graphic.raycastTarget = true;
+                button.targetGraphic = graphic;
+            }
+        }
+
+        button.interactable = true;
+        return button;
+    }
+
+    private void StepDropdownValue(TMP_Dropdown dropdown, int direction)
+    {
+        if (dropdown == null || dropdown.options.Count == 0 || direction == 0)
+        {
+            return;
+        }
+
+        int next = Mathf.Clamp(dropdown.value + Math.Sign(direction), 0, dropdown.options.Count - 1);
+        if (next == dropdown.value)
+        {
+            return;
+        }
+
+        dropdown.value = next;
+        if (dropdown == audioMixerDropdown || dropdown == audioLanguageDropdown || dropdown == audioSpeakerModeDropdown)
+        {
+            ApplyAudioSettings();
+        }
+        else
+        {
+            NotifyChanged();
+        }
+    }
+
+    private static int GetDropdownArrowDirection(Transform arrow, Transform dropdown)
+    {
+        if (arrow == null)
+        {
+            return 0;
+        }
+
+        string arrowName = arrow.name;
+        if (arrowName.IndexOf("arrow", StringComparison.OrdinalIgnoreCase) < 0
+            && arrow.parent != null
+            && arrow.parent.name.IndexOf("arrow", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            arrowName = arrow.parent.name;
+        }
+
+        if (arrowName.IndexOf("left", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return -1;
+        }
+
+        if (arrowName.IndexOf("right", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return 1;
+        }
+
+        return 0;
+    }
+
     private void NotifyChanged()
     {
         if (!suppressChangeDetection)
         {
             SetPendingChanges(true);
         }
+    }
+
+    private void NotifyGraphicsManualChanged()
+    {
+        if (suppressChangeDetection)
+        {
+            return;
+        }
+
+        SetDropdownValue(qualityDropdown, QualityPresetCustom);
+        SetPendingChanges(true);
+    }
+
+    private void ApplyQualityPresetToControls(int presetIndex, bool updateDropdown)
+    {
+        if (presetIndex == QualityPresetCustom)
+        {
+            if (updateDropdown)
+            {
+                SetDropdownValue(qualityDropdown, QualityPresetCustom);
+            }
+
+            return;
+        }
+
+        int preset = Mathf.Clamp(presetIndex, QualityPresetLow, QualityPresetUltra);
+        if (updateDropdown)
+        {
+            SetDropdownValue(qualityDropdown, preset);
+        }
+
+        switch (preset)
+        {
+            case QualityPresetLow:
+                SetDropdownValue(shadowDropdown, 0);
+                SetDropdownValue(antiAliasingDropdown, FindAntiAliasingOption("Off", "None", "Disabled"));
+                SetDropdownValue(textureDropdown, 2);
+                SetToggleValue(vSyncToggle, false);
+                SetPostProcessingSliderValue(vSyncSlider, false);
+                SetPostProcessingValue(bloomToggle, bloomSlider, false);
+                SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
+                SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, false);
+                SetPostProcessingValue(chromaticToggle, chromaticSlider, false);
+                SetPostProcessingValue(filmGrainToggle, filmGrainSlider, false);
+                break;
+            case QualityPresetMedium:
+                SetDropdownValue(shadowDropdown, 1);
+                SetDropdownValue(antiAliasingDropdown, FindAntiAliasingOption("FXAA", "MSAA 2x", "2x", "Off"));
+                SetDropdownValue(textureDropdown, 1);
+                SetToggleValue(vSyncToggle, false);
+                SetPostProcessingSliderValue(vSyncSlider, false);
+                SetPostProcessingValue(bloomToggle, bloomSlider, true);
+                SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
+                SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, false);
+                SetPostProcessingValue(chromaticToggle, chromaticSlider, false);
+                SetPostProcessingValue(filmGrainToggle, filmGrainSlider, false);
+                break;
+            case QualityPresetHigh:
+                SetDropdownValue(shadowDropdown, 2);
+                SetDropdownValue(antiAliasingDropdown, FindAntiAliasingOption("TAA", "MSAA 4x", "4x", "FXAA"));
+                SetDropdownValue(textureDropdown, 0);
+                SetToggleValue(vSyncToggle, true);
+                SetPostProcessingSliderValue(vSyncSlider, true);
+                SetPostProcessingValue(bloomToggle, bloomSlider, true);
+                SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
+                SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, true);
+                SetPostProcessingValue(chromaticToggle, chromaticSlider, true);
+                SetPostProcessingValue(filmGrainToggle, filmGrainSlider, false);
+                break;
+            case QualityPresetUltra:
+                SetDropdownValue(shadowDropdown, 2);
+                SetDropdownValue(antiAliasingDropdown, FindAntiAliasingOption("TAA", "MSAA 8x", "8x", "MSAA 4x", "4x"));
+                SetDropdownValue(textureDropdown, 0);
+                SetToggleValue(vSyncToggle, true);
+                SetPostProcessingSliderValue(vSyncSlider, true);
+                SetPostProcessingValue(bloomToggle, bloomSlider, true);
+                SetPostProcessingValue(motionBlurToggle, motionBlurSlider, true);
+                SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, true);
+                SetPostProcessingValue(chromaticToggle, chromaticSlider, true);
+                SetPostProcessingValue(filmGrainToggle, filmGrainSlider, true);
+                break;
+        }
+    }
+
+    private static List<string> GetQualityPresetLabels()
+    {
+        return new List<string> { "Low", "Medium", "High", "Ultra", "Custom" };
+    }
+
+    private static int DetectRecommendedQualityPreset()
+    {
+        if (SystemInfo.graphicsMemorySize < 1024 || SystemInfo.systemMemorySize < 4096 || SystemInfo.graphicsShaderLevel < 35)
+        {
+            return QualityPresetLow;
+        }
+
+        int score = 0;
+        if (SystemInfo.systemMemorySize >= 16000) score += 2;
+        else if (SystemInfo.systemMemorySize >= 8000) score += 1;
+
+        if (SystemInfo.graphicsMemorySize >= 8000) score += 3;
+        else if (SystemInfo.graphicsMemorySize >= 4000) score += 2;
+        else if (SystemInfo.graphicsMemorySize >= 2000) score += 1;
+
+        if (SystemInfo.processorCount >= 8) score += 2;
+        else if (SystemInfo.processorCount >= 4) score += 1;
+
+        if (SystemInfo.graphicsShaderLevel >= 50) score += 2;
+        else if (SystemInfo.graphicsShaderLevel >= 45) score += 1;
+
+        if (score >= 8) return QualityPresetUltra;
+        if (score >= 5) return QualityPresetHigh;
+        if (score >= 3) return QualityPresetMedium;
+        return QualityPresetLow;
+    }
+
+    private static int GetUnityQualityLevelForPreset(int presetIndex)
+    {
+        if (QualitySettings.names == null || QualitySettings.names.Length == 0)
+        {
+            return 0;
+        }
+
+        return presetIndex switch
+        {
+            QualityPresetLow => FindUnityQualityLevel("Low", "Very Low", "Performant", "Performance"),
+            QualityPresetMedium => FindUnityQualityLevel("Medium", "Balanced"),
+            QualityPresetHigh => FindUnityQualityLevel("High", "Beautiful"),
+            QualityPresetUltra => FindUnityQualityLevel("Ultra", "Very High", "Fantastic"),
+            _ => Mathf.Clamp(PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()), 0, QualitySettings.names.Length - 1)
+        };
+    }
+
+    private static int FindUnityQualityLevel(params string[] preferredNames)
+    {
+        for (int p = 0; p < preferredNames.Length; p++)
+        {
+            for (int i = 0; i < QualitySettings.names.Length; i++)
+            {
+                if (QualitySettings.names[i].IndexOf(preferredNames[p], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        if (preferredNames.Length > 0 && preferredNames[0].IndexOf("low", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return 0;
+        }
+
+        if (preferredNames.Length > 0 && preferredNames[0].IndexOf("medium", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return Mathf.Clamp(QualitySettings.names.Length / 2, 0, QualitySettings.names.Length - 1);
+        }
+
+        return QualitySettings.names.Length - 1;
+    }
+
+    private int FindAntiAliasingOption(params string[] preferredLabels)
+    {
+        if (antiAliasingDropdown == null || antiAliasingDropdown.options.Count == 0)
+        {
+            return 0;
+        }
+
+        for (int p = 0; p < preferredLabels.Length; p++)
+        {
+            for (int i = 0; i < antiAliasingDropdown.options.Count; i++)
+            {
+                if (antiAliasingDropdown.options[i].text.IndexOf(preferredLabels[p], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return AntiAliasingSettingsUtility.GetDefaultOptionIndex();
+    }
+
+    private static void SetPostProcessingValue(Toggle toggle, Slider slider, bool active)
+    {
+        SetToggleValue(toggle, active);
+        SetPostProcessingSliderValue(slider, active);
     }
 
     private void SetPendingChanges(bool pending)
@@ -2113,6 +2693,22 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         return null;
     }
 
+    private TMP_Text FindAudioValueText(params string[] containerNames)
+    {
+        foreach (Transform container in FindAudioTransforms(containerNames))
+        {
+            foreach (TMP_Text text in container.GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (text.transform.name == "Value Text")
+                {
+                    return text;
+                }
+            }
+        }
+
+        return null;
+    }
+
     private IEnumerable<T> FindNamedComponents<T>(string objectName) where T : Component
     {
         if (optionPanel == null || string.IsNullOrWhiteSpace(objectName))
@@ -2163,6 +2759,77 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         return lineMatch != null ? lineMatch : containsMatch;
+    }
+
+    private IEnumerable<Transform> FindTransforms(params string[] objectNames)
+    {
+        if (optionPanel == null || objectNames == null)
+        {
+            yield break;
+        }
+
+        foreach (string objectName in objectNames)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                continue;
+            }
+
+            foreach (Transform transform in optionPanel.GetComponentsInChildren<Transform>(true))
+            {
+                if (string.Equals(transform.name, objectName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(transform.name, "Line " + objectName, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return transform;
+                }
+            }
+        }
+    }
+
+    private IEnumerable<Transform> FindAudioTransforms(params string[] objectNames)
+    {
+        Transform root = audioMenu != null ? audioMenu.transform : optionPanel != null ? optionPanel.transform : null;
+        if (root == null || objectNames == null)
+        {
+            yield break;
+        }
+
+        foreach (string objectName in objectNames)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                continue;
+            }
+
+            foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (string.Equals(transform.name, objectName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(transform.name, "Line " + objectName, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return transform;
+                }
+            }
+        }
+    }
+
+    private T FindAudioComponentOrChild<T>(params string[] objectNames) where T : Component
+    {
+        foreach (Transform transform in FindAudioTransforms(objectNames))
+        {
+            T component = transform.GetComponent<T>();
+            if (component != null)
+            {
+                return component;
+            }
+
+            component = transform.GetComponentInChildren<T>(true);
+            if (component != null)
+            {
+                return component;
+            }
+        }
+
+        return null;
     }
 
     private Image FindInformationLogoImage()
