@@ -102,6 +102,7 @@ public sealed class SceneChanger : MonoBehaviour
             return;
         }
 
+        ApplyMenuSettingsBeforeSceneLoad();
         InGameOptionsMenu.SetInputBlocked(false);
 
         if (!Application.CanStreamedLevelBeLoaded(mainGameSceneName))
@@ -111,6 +112,43 @@ public sealed class SceneChanger : MonoBehaviour
         }
 
         StartCoroutine(LoadMainGameRoutine());
+    }
+
+    private void ApplyMenuSettingsBeforeSceneLoad()
+    {
+        Scene currentScene = gameObject.scene;
+
+        GraphicsSettingsManager[] graphicsManagers = FindObjectsByType<GraphicsSettingsManager>(FindObjectsInactive.Include);
+        for (int i = 0; i < graphicsManagers.Length; i++)
+        {
+            GraphicsSettingsManager manager = graphicsManagers[i];
+            if (manager != null && manager.gameObject.scene == currentScene && manager.HasUsableBindings())
+            {
+                manager.ApplySettings();
+            }
+        }
+
+        PostProcessingSettings[] postProcessingManagers = FindObjectsByType<PostProcessingSettings>(FindObjectsInactive.Include);
+        for (int i = 0; i < postProcessingManagers.Length; i++)
+        {
+            PostProcessingSettings manager = postProcessingManagers[i];
+            if (manager != null && manager.gameObject.scene == currentScene)
+            {
+                manager.ApplySettings();
+            }
+        }
+
+        AudioSettingsManager[] audioManagers = FindObjectsByType<AudioSettingsManager>(FindObjectsInactive.Include);
+        for (int i = 0; i < audioManagers.Length; i++)
+        {
+            AudioSettingsManager manager = audioManagers[i];
+            if (manager != null && manager.gameObject.scene == currentScene)
+            {
+                manager.ApplySettings();
+            }
+        }
+
+        PlayerPrefs.Save();
     }
 
     public void QuitGame()

@@ -137,7 +137,8 @@ public class PlayerScopeController : MonoBehaviour
 
     bool IsAimPressed()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed();
+        return MobileInputBridge.AimHeld
+            || kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed();
     }
 
     void UpdateCameraFov(Weapon weapon, bool isScoped, bool useScopeCamera)

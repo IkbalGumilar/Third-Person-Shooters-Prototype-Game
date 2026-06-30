@@ -114,6 +114,7 @@ public class InventoryGridUI : MonoBehaviour
 
     readonly List<Image> itemImages = new List<Image>();
     readonly List<InventoryItemDragHandler> itemHandlers = new List<InventoryItemDragHandler>();
+    readonly HashSet<Button> boundCloseButtons = new HashSet<Button>();
     RectTransform[] slots;
     Weapon highlightedWeapon;
     CanvasGroup inventoryCanvasGroup;
@@ -154,6 +155,7 @@ public class InventoryGridUI : MonoBehaviour
     {
         kontrolPemain = new KontrolPemain();
         FindMissingReferences();
+        BindInventoryCloseButtons();
         SyncInventoryToPlayerEquip();
         SetOpen(!startClosed);
         Refresh();
@@ -263,12 +265,14 @@ public class InventoryGridUI : MonoBehaviour
 
     bool IsInventoryUsePressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.InventoryUse.WasPressedThisFrame();
+        return MobileInputBridge.ConsumeInventoryUse()
+            || kontrolPemain != null && kontrolPemain.Pemain.InventoryUse.WasPressedThisFrame();
     }
 
     bool IsPickupPressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Pickup.WasPressedThisFrame();
+        return MobileInputBridge.ConsumePickup()
+            || kontrolPemain != null && kontrolPemain.Pemain.Pickup.WasPressedThisFrame();
     }
 
     bool IsInventoryPointerClickPressedThisFrame()
@@ -298,6 +302,29 @@ public class InventoryGridUI : MonoBehaviour
         SetOpen(!IsOpen());
     }
 
+    public void UseBestHealingItemFromUI()
+    {
+        if (!TryUseBestHealingItem())
+        {
+            ShowNotification(noHealingItemMessage);
+            nextLowHealthPromptTime = Time.unscaledTime + Mathf.Max(0.1f, lowHealthPromptInterval);
+        }
+    }
+
+    public bool HasActivePickupPrompt => activePickupPrompt != null;
+
+    public bool ShouldShowEmergencyHealingUse()
+    {
+        return IsLowHealthForHealingShortcut() && HasUsableHealingItem();
+    }
+
+    public Sprite GetBestHealingItemIcon()
+    {
+        int itemIndex = FindBestHealingItemIndex();
+        InventoryEntry entry = itemIndex >= 0 ? GetInventoryEntry(itemIndex) : null;
+        return entry != null ? entry.Icon : null;
+    }
+
     public void SetOpen(bool open)
     {
         if (inventoryRoot == null)
@@ -306,6 +333,7 @@ public class InventoryGridUI : MonoBehaviour
         }
 
         FindMissingReferences();
+        BindInventoryCloseButtons();
         CacheInventoryAnimationState();
 
         if (openCloseAnimationRoutine != null)
@@ -755,7 +783,12 @@ public class InventoryGridUI : MonoBehaviour
             return;
         }
 
-        if (eventData.button == PointerEventData.InputButton.Left)
+        if (MobileInputBridge.MobileUIActive && eventData.button == PointerEventData.InputButton.Left)
+        {
+            PreviewInventoryItem(itemIndex);
+            OpenContextMenu(itemIndex, eventData.position, eventData.pressEventCamera);
+        }
+        else if (eventData.button == PointerEventData.InputButton.Left)
         {
             CloseContextMenu();
             PreviewInventoryItem(itemIndex);
@@ -877,6 +910,55 @@ public class InventoryGridUI : MonoBehaviour
 
         contextMenuRect = null;
         contextMenuItemIndex = -1;
+    }
+
+    void BindInventoryCloseButtons()
+    {
+        if (inventoryRoot == null)
+        {
+            return;
+        }
+
+        Button[] buttons = inventoryRoot.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button == null || boundCloseButtons.Contains(button) || !IsInventoryCloseButton(button))
+            {
+                continue;
+            }
+
+            button.onClick.RemoveListener(CloseInventoryFromButton);
+            button.onClick.AddListener(CloseInventoryFromButton);
+            if (button.targetGraphic != null)
+            {
+                button.targetGraphic.raycastTarget = true;
+            }
+
+            boundCloseButtons.Add(button);
+        }
+    }
+
+    bool IsInventoryCloseButton(Button button)
+    {
+        if (button == null)
+        {
+            return false;
+        }
+
+        string objectName = button.gameObject.name;
+        return objectName == "Close"
+            || objectName == "Cencel"
+            || objectName == "Cancel"
+            || objectName == "Back"
+            || objectName == "Close Inventory"
+            || objectName == "Cencel Inventory"
+            || objectName == "Cancel Inventory";
+    }
+
+    void CloseInventoryFromButton()
+    {
+        SetOpen(false);
     }
 
     void AssignInventoryItemToHotkey(int itemIndex, int hotkeyIndex)
@@ -1591,13 +1673,7 @@ public class InventoryGridUI : MonoBehaviour
 
     void HandleClosedInventoryHealingShortcut()
     {
-        if (playerHealth == null || playerHealth.IsDead || playerHealth.MaxHealth <= 0f)
-        {
-            return;
-        }
-
-        bool isLowHealth = playerHealth.CurrentHealth / playerHealth.MaxHealth <= Mathf.Clamp01(lowHealthHealingThreshold);
-        if (!isLowHealth)
+        if (!IsLowHealthForHealingShortcut())
         {
             return;
         }
@@ -1616,6 +1692,14 @@ public class InventoryGridUI : MonoBehaviour
                 nextLowHealthPromptTime = Time.unscaledTime + Mathf.Max(0.1f, lowHealthPromptInterval);
             }
         }
+    }
+
+    bool IsLowHealthForHealingShortcut()
+    {
+        return playerHealth != null
+            && !playerHealth.IsDead
+            && playerHealth.MaxHealth > 0f
+            && playerHealth.CurrentHealth / playerHealth.MaxHealth <= Mathf.Clamp01(lowHealthHealingThreshold);
     }
 
     bool HasUsableHealingItem()

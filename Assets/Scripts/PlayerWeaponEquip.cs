@@ -251,6 +251,28 @@ public class PlayerWeaponEquip : MonoBehaviour
         return true;
     }
 
+    public bool TryEquipHotkeyFromUI(int hotkeyNumber)
+    {
+        if (!allowInput || !allowNumberKeySwitch || IsActionBlockingSwitch())
+        {
+            return false;
+        }
+
+        return TryEquipHotkey(Mathf.Clamp(hotkeyNumber - 1, 0, 3));
+    }
+
+    public Weapon GetHotkeyWeapon(int hotkeyNumber)
+    {
+        int hotkeyIndex = hotkeyNumber - 1;
+        if (hotkeyWeaponSlots == null || hotkeyIndex < 0 || hotkeyIndex >= 4 || hotkeyIndex >= hotkeyWeaponSlots.Length)
+        {
+            return null;
+        }
+
+        WeaponSlot slot = hotkeyWeaponSlots[hotkeyIndex];
+        return slot != null ? slot.weapon : null;
+    }
+
     void EnsureHotkeySlots(int requiredLength)
     {
         if (hotkeyWeaponSlots != null && hotkeyWeaponSlots.Length >= requiredLength)

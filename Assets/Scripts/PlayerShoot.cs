@@ -219,17 +219,20 @@ public class PlayerShoot : MonoBehaviour
 
     bool IsShootPressed()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Tembak.IsPressed();
+        return MobileInputBridge.ShootHeld
+            || kontrolPemain != null && kontrolPemain.Pemain.Tembak.IsPressed();
     }
 
     bool IsShootPressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Tembak.WasPressedThisFrame();
+        return MobileInputBridge.ConsumeShootPressedThisFrame()
+            || kontrolPemain != null && kontrolPemain.Pemain.Tembak.WasPressedThisFrame();
     }
 
     bool IsReloadPressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Reload.WasPressedThisFrame();
+        return MobileInputBridge.ConsumeReload()
+            || kontrolPemain != null && kontrolPemain.Pemain.Reload.WasPressedThisFrame();
     }
 
     bool CanEmergencyShotgunShot()

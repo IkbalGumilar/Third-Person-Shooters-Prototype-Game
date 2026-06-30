@@ -803,12 +803,12 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        Vector2 gerakInput = kontrolPemain.Pemain.Gerak.ReadValue<Vector2>();
+        Vector2 gerakInput = GetMovementInput();
         float moveX = gerakInput.x;
         float moveZ = gerakInput.y;
         bool isMoving = Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f;
         currentIsMoving = isMoving;
-        bool wantsToRun = isMoving && !isCrouching && !isCrawling && !statusBlocksRun && kontrolPemain.Pemain.Lari.IsPressed();
+        bool wantsToRun = isMoving && !isCrouching && !isCrawling && !statusBlocksRun && IsRunHeld();
         bool isRunning = wantsToRun && CanUseStaminaAction();
 
         Vector3 camForward = (cameraTransform != null) ? cameraTransform.forward : transform.forward;
@@ -820,7 +820,7 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 move = Vector3.ClampMagnitude(camRight * moveX + camForward * moveZ, 1f);
 
-        bool isAiming = kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed();
+        bool isAiming = (kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed()) || MobileInputBridge.AimHeld;
         if (rotateToMovementWhenNotAiming && isMoving && !isAiming && move.sqrMagnitude > 0.0001f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(move, Vector3.up);
@@ -880,7 +880,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Jump()
     {
-        if (!isRollingAction && !statusBlocksJump && kontrolPemain.Pemain.Lompat.WasPressedThisFrame() && isGrounded && CanUseStaminaAction() && currentStamina >= jumpStaminaCost)
+        if (!isRollingAction && !statusBlocksJump && IsJumpPressedThisFrame() && isGrounded && CanUseStaminaAction() && currentStamina >= jumpStaminaCost)
         {
             BeginJump(true);
         }
@@ -982,7 +982,8 @@ public class PlayerMovement : MonoBehaviour
 
     Vector2 GetMovementInput()
     {
-        return kontrolPemain.Pemain.Gerak.ReadValue<Vector2>();
+        Vector2 keyboardInput = kontrolPemain != null ? kontrolPemain.Pemain.Gerak.ReadValue<Vector2>() : Vector2.zero;
+        return MobileInputBridge.MoveInput.sqrMagnitude > 0.0001f ? MobileInputBridge.MoveInput : keyboardInput;
     }
 
     Vector2 NormalizeRollInput(Vector2 rollInput)
@@ -1108,7 +1109,7 @@ public class PlayerMovement : MonoBehaviour
             isCrouching = isCrawling || isCrouching;
         }
 
-        if (kontrolPemain.Pemain.Crouch.WasPressedThisFrame())
+        if (IsCrouchPressedThisFrame())
         {
             isCrouching = !isCrouching;
             if (!isCrouching)
@@ -1388,18 +1389,37 @@ public class PlayerMovement : MonoBehaviour
             && !isCrouching
             && !isCrawling
             && !statusBlocksRun
-            && kontrolPemain.Pemain.Lari.IsPressed()
+            && IsRunHeld()
             && CanUseStaminaAction();
+    }
+
+    bool IsRunHeld()
+    {
+        return MobileInputBridge.RunHeld || kontrolPemain != null && kontrolPemain.Pemain.Lari.IsPressed();
+    }
+
+    bool IsJumpPressedThisFrame()
+    {
+        return MobileInputBridge.ConsumeJump()
+            || kontrolPemain != null && kontrolPemain.Pemain.Lompat.WasPressedThisFrame();
     }
 
     bool IsRollPressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Roll.WasPressedThisFrame();
+        return MobileInputBridge.ConsumeRoll()
+            || kontrolPemain != null && kontrolPemain.Pemain.Roll.WasPressedThisFrame();
+    }
+
+    bool IsCrouchPressedThisFrame()
+    {
+        return MobileInputBridge.ConsumeCrouch()
+            || kontrolPemain != null && kontrolPemain.Pemain.Crouch.WasPressedThisFrame();
     }
 
     bool IsCrawlPressedThisFrame()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Crawl.WasPressedThisFrame();
+        return MobileInputBridge.ConsumeCrawl()
+            || kontrolPemain != null && kontrolPemain.Pemain.Crawl.WasPressedThisFrame();
     }
 
     string GetBaseLocomotionState(bool isRunning)
@@ -1622,11 +1642,11 @@ public class PlayerMovement : MonoBehaviour
             controller.Move(rollDirection * (rollDistance - moved));
         }
 
-        Vector2 gerakInput = kontrolPemain.Pemain.Gerak.ReadValue<Vector2>();
+        Vector2 gerakInput = GetMovementInput();
         float moveX = gerakInput.x;
         float moveZ = gerakInput.y;
         bool isMoving = Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f;
-        bool wantsToRun = isMoving && !isCrouching && !isCrawling && !statusBlocksRun && kontrolPemain.Pemain.Lari.IsPressed();
+        bool wantsToRun = isMoving && !isCrouching && !isCrawling && !statusBlocksRun && IsRunHeld();
         bool isRunning = wantsToRun && CanUseStaminaAction();
 
         SetAnimatorBool("IsRolling", false);

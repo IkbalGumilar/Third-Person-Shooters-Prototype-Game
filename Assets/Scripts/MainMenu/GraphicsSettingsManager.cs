@@ -16,6 +16,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     private const string VSyncKey = "Graphics.VSync";
     private const string FullscreenKey = "Graphics.Fullscreen";
     private const string FieldOfViewKey = "Graphics.FieldOfView";
+    private const string FoliagePhysicsKey = VegetationWindSettings.PreferenceKey;
     private const int QualityPresetLow = 0;
     private const int QualityPresetMedium = 1;
     private const int QualityPresetHigh = 2;
@@ -33,9 +34,12 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     [SerializeField] private Slider vSyncSlider;
     [SerializeField] private Slider fullscreenSlider;
     [SerializeField] private Toggle motionBlurToggle;
+    [SerializeField] private Toggle foliagePhysicsToggle;
+    [SerializeField] private Slider foliagePhysicsSlider;
     [SerializeField] private Slider fovSlider;
     [SerializeField] private Component postProcessingVolume;
     [SerializeField] private PostProcessingSettings postProcessingSettings;
+    [SerializeField] private VegetationWindSettings vegetationWindSettings;
 
     private readonly List<Resolution> availableResolutions = new();
     private bool initialized;
@@ -45,6 +49,27 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         Initialize();
     }
 
+    public bool HasUsableBindings()
+    {
+        if (aaDropdown != null && textureDropdown != null && ReferenceEquals(aaDropdown, textureDropdown))
+        {
+            return false;
+        }
+
+        return resolutionDropdown != null
+            || graphicsDropdown != null
+            || shadowDropdown != null
+            || aaDropdown != null
+            || textureDropdown != null
+            || vSyncToggle != null
+            || fullscreenToggle != null
+            || vSyncSlider != null
+            || fullscreenSlider != null
+            || foliagePhysicsToggle != null
+            || foliagePhysicsSlider != null
+            || fovSlider != null;
+    }
+
     public void ConfigureForOptions(TMP_Dropdown resolution, TMP_Dropdown quality, TMP_Dropdown shadows, TMP_Dropdown antiAliasing, TMP_Dropdown textures, Toggle vSync, Toggle fullscreen, Slider fov)
     {
         ConfigureForOptions(resolution, quality, shadows, antiAliasing, textures, vSync, fullscreen, fov, null, null);
@@ -52,6 +77,12 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
     public void ConfigureForOptions(TMP_Dropdown resolution, TMP_Dropdown quality, TMP_Dropdown shadows, TMP_Dropdown antiAliasing, TMP_Dropdown textures,
         Toggle vSync, Toggle fullscreen, Slider fov, Slider vSyncControl, Slider fullscreenControl)
+    {
+        ConfigureForOptions(resolution, quality, shadows, antiAliasing, textures, vSync, fullscreen, fov, vSyncControl, fullscreenControl, null, null);
+    }
+
+    public void ConfigureForOptions(TMP_Dropdown resolution, TMP_Dropdown quality, TMP_Dropdown shadows, TMP_Dropdown antiAliasing, TMP_Dropdown textures,
+        Toggle vSync, Toggle fullscreen, Slider fov, Slider vSyncControl, Slider fullscreenControl, Toggle foliagePhysics, Slider foliagePhysicsControl)
     {
         resolutionDropdown = resolution;
         graphicsDropdown = quality;
@@ -63,6 +94,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         fovSlider = fov;
         vSyncSlider = vSyncControl;
         fullscreenSlider = fullscreenControl;
+        foliagePhysicsToggle = foliagePhysics;
+        foliagePhysicsSlider = foliagePhysicsControl;
         initialized = false;
         Initialize();
     }
@@ -74,6 +107,13 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             return;
         }
 
+        if (!HasUsableBindings())
+        {
+            initialized = true;
+            enabled = false;
+            return;
+        }
+
         PopulateResolutionOptions();
         PopulateQualityOptions();
         PopulateShadowOptions();
@@ -81,6 +121,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         PopulateTextureQualityOptions();
         RegisterQualityPresetListener();
         RegisterManualQualityListeners();
+        ConfigureBinarySlider(foliagePhysicsSlider);
+        ResolveVegetationWindSettings();
         RestoreSavedValues();
         PreviewFieldOfView();
         initialized = true;
@@ -115,8 +157,11 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         if (textureDropdown != null)
         {
-            QualitySettings.globalTextureMipmapLimit = Mathf.Clamp(textureDropdown.value, 0, 3);
-            PlayerPrefs.SetInt(TextureKey, textureDropdown.value);
+            int textureQuality = Mathf.Clamp(textureDropdown.value, 0, 3);
+            QualitySettings.globalTextureMipmapLimit = textureQuality;
+            ResolveVegetationWindSettings();
+            vegetationWindSettings?.ApplyTextureQuality(textureQuality, false);
+            PlayerPrefs.SetInt(TextureKey, textureQuality);
         }
 
         if (vSyncToggle != null || vSyncSlider != null)
@@ -131,6 +176,11 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             bool active = GetBinaryControlValue(fullscreenToggle, fullscreenSlider);
             Screen.fullScreenMode = active ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
             PlayerPrefs.SetInt(FullscreenKey, active ? 1 : 0);
+        }
+
+        if (foliagePhysicsToggle != null || foliagePhysicsSlider != null)
+        {
+            ApplyFoliagePhysicsFromControls(true);
         }
 
         if (fovSlider != null)
@@ -153,6 +203,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(VSyncKey);
         PlayerPrefs.DeleteKey(FullscreenKey);
         PlayerPrefs.DeleteKey(FieldOfViewKey);
+        PlayerPrefs.DeleteKey(FoliagePhysicsKey);
         PlayerPrefs.Save();
 
         RestoreSavedValues();
@@ -258,9 +309,31 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     {
         if (shadowDropdown != null) shadowDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
         if (aaDropdown != null) aaDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
-        if (textureDropdown != null) textureDropdown.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (textureDropdown != null)
+        {
+            textureDropdown.onValueChanged.AddListener(_ =>
+            {
+                SetQualityPresetCustom();
+                ApplyVegetationTextureQualityFromControls(false);
+            });
+        }
         if (vSyncToggle != null) vSyncToggle.onValueChanged.AddListener(_ => SetQualityPresetCustom());
         if (vSyncSlider != null) vSyncSlider.onValueChanged.AddListener(_ => SetQualityPresetCustom());
+        if (foliagePhysicsToggle != null)
+        {
+            foliagePhysicsToggle.onValueChanged.AddListener(_ =>
+            {
+                SetQualityPresetCustom();
+            });
+        }
+
+        if (foliagePhysicsSlider != null)
+        {
+            foliagePhysicsSlider.onValueChanged.AddListener(_ =>
+            {
+                SetQualityPresetCustom();
+            });
+        }
     }
 
     private void SetQualityPresetCustom()
@@ -297,6 +370,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
                 SetDropdownValue(textureDropdown, 2);
                 SetToggleValue(vSyncToggle, false);
                 SetBinarySliderValue(vSyncSlider, false);
+                SetToggleValue(foliagePhysicsToggle, false);
+                SetBinarySliderValue(foliagePhysicsSlider, false);
                 SetPostProcessingPreset(false, false, false, false, false);
                 break;
             case QualityPresetMedium:
@@ -305,6 +380,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
                 SetDropdownValue(textureDropdown, 1);
                 SetToggleValue(vSyncToggle, false);
                 SetBinarySliderValue(vSyncSlider, false);
+                SetToggleValue(foliagePhysicsToggle, true);
+                SetBinarySliderValue(foliagePhysicsSlider, true);
                 SetPostProcessingPreset(true, false, false, false, false);
                 break;
             case QualityPresetHigh:
@@ -313,6 +390,8 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
                 SetDropdownValue(textureDropdown, 0);
                 SetToggleValue(vSyncToggle, true);
                 SetBinarySliderValue(vSyncSlider, true);
+                SetToggleValue(foliagePhysicsToggle, true);
+                SetBinarySliderValue(foliagePhysicsSlider, true);
                 SetPostProcessingPreset(true, false, true, true, false);
                 break;
             case QualityPresetUltra:
@@ -321,9 +400,13 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
                 SetDropdownValue(textureDropdown, 0);
                 SetToggleValue(vSyncToggle, true);
                 SetBinarySliderValue(vSyncSlider, true);
+                SetToggleValue(foliagePhysicsToggle, true);
+                SetBinarySliderValue(foliagePhysicsSlider, true);
                 SetPostProcessingPreset(true, true, true, true, true);
                 break;
         }
+
+        ApplyVegetationTextureQualityFromControls(false);
     }
 
     private void SetPostProcessingPreset(bool bloom, bool motionBlur, bool depthOfField, bool chromaticAberration, bool filmGrain)
@@ -471,6 +554,17 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
 
         SetBinarySliderValue(fullscreenSlider, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
 
+        bool foliagePhysicsActive = PlayerPrefs.GetInt(FoliagePhysicsKey, 1) == 1;
+        if (foliagePhysicsToggle != null)
+        {
+            foliagePhysicsToggle.SetIsOnWithoutNotify(foliagePhysicsActive);
+        }
+
+        SetBinarySliderValue(foliagePhysicsSlider, foliagePhysicsActive);
+        ResolveVegetationWindSettings();
+        vegetationWindSettings?.SetEnabled(foliagePhysicsActive, false);
+        ApplyVegetationTextureQualityFromControls(false);
+
         if (fovSlider != null)
         {
             fovSlider.SetValueWithoutNotify(PlayerPrefs.GetFloat(FieldOfViewKey, fovSlider.value));
@@ -510,6 +604,18 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         return toggle != null && toggle.isOn;
+    }
+
+    private static void ConfigureBinarySlider(Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = true;
     }
 
     private static void SetBinarySliderValue(Slider slider, bool active)
@@ -563,5 +669,47 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         Camera.main.fieldOfView = fovSlider.value;
+    }
+
+    private void ResolveVegetationWindSettings()
+    {
+        if (vegetationWindSettings != null)
+        {
+            return;
+        }
+
+        vegetationWindSettings = FindAnyObjectByType<VegetationWindSettings>(FindObjectsInactive.Include);
+        if (vegetationWindSettings == null)
+        {
+            vegetationWindSettings = gameObject.AddComponent<VegetationWindSettings>();
+        }
+    }
+
+    private void ApplyFoliagePhysicsFromControls(bool save)
+    {
+        if (foliagePhysicsToggle == null && foliagePhysicsSlider == null)
+        {
+            return;
+        }
+
+        bool active = GetBinaryControlValue(foliagePhysicsToggle, foliagePhysicsSlider);
+        ResolveVegetationWindSettings();
+        vegetationWindSettings?.SetEnabled(active, save);
+        if (save)
+        {
+            PlayerPrefs.SetInt(FoliagePhysicsKey, active ? 1 : 0);
+        }
+    }
+
+    private void ApplyVegetationTextureQualityFromControls(bool save)
+    {
+        if (textureDropdown == null)
+        {
+            return;
+        }
+
+        int textureQuality = Mathf.Clamp(textureDropdown.value, 0, 3);
+        ResolveVegetationWindSettings();
+        vegetationWindSettings?.ApplyTextureQuality(textureQuality, save);
     }
 }

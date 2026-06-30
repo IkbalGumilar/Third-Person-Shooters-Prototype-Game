@@ -67,27 +67,27 @@ public class PlayerHUD : MonoBehaviour
 
         if (healthBar == null)
         {
-            Transform health = transform.Find("Health");
+            Transform health = FindDeepChildPath("Health");
             healthBar = health != null ? health.GetComponent<HudValueBar>() : null;
         }
 
         if (healthText == null)
         {
-            Transform healthTextTransform = transform.Find("Health/Health Text");
+            Transform healthTextTransform = FindDeepChildPath("Health/Health Text");
             healthText = healthTextTransform != null ? healthTextTransform.GetComponent<TMP_Text>() : null;
         }
 
         if (shieldPointSlider == null || shieldPointRect == null || shieldPointImage == null || shieldFillRect == null || shieldFillImage == null)
         {
-            Transform shieldPoint = transform.Find("Health/Shield point");
+            Transform shieldPoint = FindDeepChildPath("Health/Shield point");
             if (shieldPoint == null)
             {
-                shieldPoint = transform.Find("Health/Shield Point");
+                shieldPoint = FindDeepChildPath("Health/Shield Point");
             }
 
             if (shieldPoint == null)
             {
-                shieldPoint = transform.Find("Health/Shield");
+                shieldPoint = FindDeepChildPath("Health/Shield");
             }
 
             if (shieldPoint != null)
@@ -101,31 +101,31 @@ public class PlayerHUD : MonoBehaviour
 
         if (staminaBar == null)
         {
-            Transform stamina = transform.Find("Stamina");
+            Transform stamina = FindDeepChildPath("Stamina");
             staminaBar = stamina != null ? stamina.GetComponent<HudValueBar>() : null;
         }
 
         if (magazineText == null)
         {
-            Transform magazine = transform.Find("Bullet Icon/Magazine");
+            Transform magazine = FindDeepChildPath("Bullet Icon/Magazine");
             magazineText = magazine != null ? magazine.GetComponent<TMP_Text>() : null;
         }
 
         if (chamberObject == null)
         {
-            Transform chamber = transform.Find("Bullet Icon/Magazine/Chamber");
+            Transform chamber = FindDeepChildPath("Bullet Icon/Magazine/Chamber");
             chamberObject = chamber != null ? chamber.gameObject : null;
         }
 
         if (reserveAmmoText == null)
         {
-            Transform reserveAmmo = transform.Find("Bullet Icon/Bullet");
+            Transform reserveAmmo = FindDeepChildPath("Bullet Icon/Bullet");
             reserveAmmoText = reserveAmmo != null ? reserveAmmo.GetComponent<TMP_Text>() : null;
         }
 
         if (bossHealthObject == null)
         {
-            Transform bossHealth = transform.Find("Boss Health");
+            Transform bossHealth = FindDeepChildPath("Boss Health");
             bossHealthObject = bossHealth != null ? bossHealth.gameObject : null;
         }
 
@@ -160,6 +160,52 @@ public class PlayerHUD : MonoBehaviour
         {
             bossDistanceOrigin = playerHealth.transform;
         }
+    }
+
+    Transform FindDeepChildPath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        Transform direct = transform.Find(path);
+        if (direct != null)
+        {
+            return direct;
+        }
+
+        string[] parts = path.Split('/');
+        return FindDeepChildPath(transform, parts, 0);
+    }
+
+    Transform FindDeepChildPath(Transform root, string[] parts, int partIndex)
+    {
+        if (root == null || parts == null || partIndex >= parts.Length)
+        {
+            return root;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == parts[partIndex])
+            {
+                Transform found = FindDeepChildPath(child, parts, partIndex + 1);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            Transform nested = FindDeepChildPath(child, parts, partIndex);
+            if (nested != null)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     void UpdateBars()

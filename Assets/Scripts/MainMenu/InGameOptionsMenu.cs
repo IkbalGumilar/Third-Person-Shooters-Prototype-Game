@@ -41,6 +41,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private const string TextureKey = "Graphics.TextureQuality";
     private const string VSyncKey = "Graphics.VSync";
     private const string FullscreenKey = "Graphics.Fullscreen";
+    private const string FoliagePhysicsKey = VegetationWindSettings.PreferenceKey;
     private const string CameraSensitivityKey = "Controls.CameraSensitivity";
     private const string AimSensitivityKey = "Controls.AimSensitivity";
     private const string InvertMouseKey = "Controls.InvertMouse";
@@ -73,8 +74,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private TMP_Dropdown textureDropdown;
     private Toggle vSyncToggle;
     private Toggle fullscreenToggle;
+    private Toggle foliagePhysicsToggle;
     private Slider vSyncSlider;
     private Slider fullscreenSlider;
+    private Slider foliagePhysicsSlider;
     private Slider cameraSensitivitySlider;
     private Slider aimSensitivitySlider;
     private Toggle invertMouseToggle;
@@ -145,6 +148,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private bool isLoadingMainMenu;
     private bool optionAnimationStateCached;
     private bool optionsOpen;
+    private bool boundToMainMenu;
+    private int lastAppliedSettingsSceneHandle = int.MinValue;
+    private GameObject mainMenuSelectMenu;
+    private bool mainMenuSelectMenuWasActiveBeforeOptions;
     private PlayerHealth playerHealth;
     private PlayerMovement playerMovement;
     private PlayerShoot playerShoot;
@@ -253,13 +260,18 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void Update()
     {
+        if (boundToMainMenu)
+        {
+            return;
+        }
+
         if (inputBlocked)
         {
             CloseForExternalInputBlock();
             return;
         }
 
-        if (playerHealth != null && playerHealth.IsDead)
+        if (!boundToMainMenu && playerHealth != null && playerHealth.IsDead)
         {
             CloseForPlayerDeath();
             return;
@@ -276,8 +288,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             || isLoadingMainMenu
             || optionAnimationRoutine != null
             || (!togglePressed && !cancelPressed)
-            || InventoryGridUI.IsAnyInventoryOpen
-            || InventoryGridUI.LastClosedByCancelFrame == Time.frameCount)
+            || (!boundToMainMenu && InventoryGridUI.IsAnyInventoryOpen)
+            || (!boundToMainMenu && InventoryGridUI.LastClosedByCancelFrame == Time.frameCount))
         {
             return;
         }
@@ -319,6 +331,9 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         optionPanel = null;
         optionPanelRect = null;
         confirmationPanel = null;
+        mainMenuSelectMenu = null;
+        boundToMainMenu = false;
+        mainMenuSelectMenuWasActiveBeforeOptions = false;
         optionAnimationStateCached = false;
         optionsOpen = false;
         optionChildOpenScales.Clear();
@@ -328,29 +343,60 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             optionAnimationRoutine = null;
         }
 
-        if (SceneManager.GetActiveScene().name != MainSceneName)
+        string sceneName = SceneManager.GetActiveScene().name;
+        if (sceneName == MainSceneName)
         {
-            return;
-        }
+            optionPanel = FindSceneObject("Option");
+            if (optionPanel == null)
+            {
+                Debug.LogWarning("MainScene Options UI named 'Option' was not found.");
+                return;
+            }
 
-        optionPanel = FindSceneObject("Option");
-        if (optionPanel == null)
+            ResolvePlayerControlReferences();
+            SubscribePlayerHealth();
+        }
+        else if (sceneName == MainMenuSceneName)
         {
-            Debug.LogWarning("MainScene Options UI named 'Option' was not found.");
+            boundToMainMenu = true;
+            optionPanel = FindSceneObject("Select Setting");
+            if (optionPanel == null)
+            {
+                optionPanel = FindSceneObject("Settings");
+            }
+
+            if (optionPanel == null)
+            {
+                optionPanel = FindSceneObject("Option");
+            }
+
+            if (optionPanel == null)
+            {
+                Debug.LogWarning("MainMenu Options UI named 'Select Setting', 'Settings', or 'Option' was not found.");
+                return;
+            }
+
+            mainMenuSelectMenu = FindSceneObject("Select Menu");
+        }
+        else
+        {
             return;
         }
 
         CopySceneInspectorConfiguration();
         BindControls();
-        ResolvePlayerControlReferences();
-        SubscribePlayerHealth();
         ConfigureControls();
         AttachSharedSettingsControllers();
         RegisterListeners();
         RegisterOptionInformationTargets();
-        CreateConfirmationDialog();
+        if (!boundToMainMenu)
+        {
+            CreateConfirmationDialog();
+        }
+
         CacheOptionAnimationState();
         SetOptionPanelImmediate(false);
+        ApplySettingsOnceForScene(SceneManager.GetActiveScene());
     }
 
     private void BindControls()
@@ -362,8 +408,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         textureDropdown = FindComponentOrChild<TMP_Dropdown>("TextureQuality", "Texture Quality", "Texture Quality text");
         vSyncToggle = FindComponentOrChild<Toggle>("V-Sync", "VSync");
         fullscreenToggle = FindComponentOrChild<Toggle>("FullScreenMode", "Full screen", "Fullscreen");
+        foliagePhysicsToggle = FindComponentOrChild<Toggle>("Physics", "Physics text", "Foliage Physics", "Vegetation Physics", "Wind");
         vSyncSlider = FindComponentOrChild<Slider>("V-Sync", "VSync");
         fullscreenSlider = FindComponentOrChild<Slider>("FullScreenMode", "Full screen", "Fullscreen");
+        foliagePhysicsSlider = FindComponentOrChild<Slider>("Physics", "Physics text", "Foliage Physics", "Vegetation Physics", "Wind");
         cameraSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity", "Sensitivity text", "Camera Sensitivity", "Mouse Sensitivity");
         aimSensitivitySlider = FindComponentOrChild<Slider>("Sensitivity aim", "Sensitivity Aim text", "Aim Sensitivity");
         invertMouseToggle = FindComponentOrChild<Toggle>("Invert Mose", "Invert Mouse");
@@ -393,9 +441,19 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         musicVolumeValueText = FindAudioValueText("Music Volume text", "Music Volume", "Music");
         sfxVolumeValueText = FindAudioValueText("Sound Effect Volume text", "Sound Volume text", "SFX Volume text", "Sound Tab", "SFX", "Sound");
         uiVolumeValueText = FindAudioValueText("UI Volume text", "UI Volume", "UI");
+        if (graphicsMenu == null) graphicsMenu = FindChildGameObject("Graphics menu", "Graphic menu", "Graphics Menu");
+        if (controlMenu == null) controlMenu = FindChildGameObject("Control menu", "Controls menu", "Control Menu", "Controls Menu");
+        if (audioMenu == null) audioMenu = FindChildGameObject("Audio menu", "Sound menu", "Audio Menu", "Sound Menu");
         applyButton = FindComponentOrChild<Button>("Apply");
         selectedOptionTitleText = FindComponentOrChild<TMP_Text>("Select Text");
         selectedOptionInfoText = FindComponentOrChild<TMP_Text>("Information Text");
+        if (graphicsTabButton == null) graphicsTabButton = FindComponentOrChild<Button>("Graphics Tab");
+        if (controlTabButton == null) controlTabButton = FindComponentOrChild<Button>("Controls Tab", "Control Tab");
+        if (audioTabButton == null) audioTabButton = FindComponentOrChild<Button>("Audio Tab", "Sound Tab");
+        if (graphicsTabHighlight == null) graphicsTabHighlight = FindNamedChild(graphicsTabButton != null ? graphicsTabButton.transform : null, "Tab");
+        if (controlTabHighlight == null) controlTabHighlight = FindNamedChild(controlTabButton != null ? controlTabButton.transform : null, "Tab");
+        if (audioTabHighlight == null) audioTabHighlight = FindNamedChild(audioTabButton != null ? audioTabButton.transform : null, "Tab");
+        if (closeButton == null) closeButton = FindComponentOrChild<Button>("Close", "X", "Back");
         if (selectedOptionLogoImage == null)
         {
             selectedOptionLogoImage = FindInformationLogoImage();
@@ -421,6 +479,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         PopulateDropdown(textureDropdown, new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
         ConfigurePostProcessingSlider(vSyncSlider);
         ConfigurePostProcessingSlider(fullscreenSlider);
+        ConfigurePostProcessingSlider(foliagePhysicsSlider);
         ConfigureSensitivitySlider(cameraSensitivitySlider);
         ConfigureSensitivitySlider(aimSensitivitySlider);
         ConfigurePostProcessingSlider(invertMouseSlider);
@@ -444,7 +503,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         sharedGraphicsSettings.ConfigureForOptions(resolutionDropdown, qualityDropdown, shadowDropdown, antiAliasingDropdown, textureDropdown,
-            vSyncToggle, fullscreenToggle, null, vSyncSlider, fullscreenSlider);
+            vSyncToggle, fullscreenToggle, null, vSyncSlider, fullscreenSlider, foliagePhysicsToggle, foliagePhysicsSlider);
 
         resourceUsageDisplay = optionPanel.GetComponent<ResourceUsageDisplay>();
         if (resourceUsageDisplay == null)
@@ -498,9 +557,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterDropdownArrows(shadowDropdown, "Shadow", "Shadow Quality", "Shadow Quality text");
         RegisterDropdownArrows(antiAliasingDropdown, "Anti-Aliasing", "Anti-Aliasing text");
         RegisterDropdownArrows(textureDropdown, "TextureQuality", "Texture Quality", "Texture Quality text");
+        RegisterVegetationTexturePreviewListener(textureDropdown);
         RegisterGraphicsManualChangeListener(vSyncToggle);
+        RegisterGraphicsManualChangeListener(foliagePhysicsToggle);
         RegisterChangeListener(fullscreenToggle);
         RegisterGraphicsManualPostProcessingSlider(vSyncSlider);
+        RegisterGraphicsManualPostProcessingSlider(foliagePhysicsSlider);
         RegisterPostProcessingSlider(fullscreenSlider);
         RegisterInstantSensitivityListener(cameraSensitivitySlider);
         RegisterInstantSensitivityListener(aimSensitivitySlider);
@@ -549,13 +611,75 @@ public sealed class InGameOptionsMenu : MonoBehaviour
             RegisterResetButton(defaultButton);
         }
 
-        foreach (Button mainMenuButton in FindComponentsOrChild<Button>("Main Menu", "MainMenu"))
+        if (boundToMainMenu)
         {
-            mainMenuButton.onClick.RemoveAllListeners();
-            mainMenuButton.onClick.AddListener(RequestReturnToMainMenu);
+            RegisterMainMenuSettingsButtons();
+        }
+        else
+        {
+            foreach (Button mainMenuButton in FindComponentsOrChild<Button>("Main Menu", "MainMenu"))
+            {
+                mainMenuButton.onClick.RemoveAllListeners();
+                mainMenuButton.onClick.AddListener(RequestReturnToMainMenu);
+            }
         }
 
         RegisterCloseButton();
+    }
+
+    private void RegisterMainMenuSettingsButtons()
+    {
+        foreach (Button button in Resources.FindObjectsOfTypeAll<Button>())
+        {
+            if (button == null
+                || !button.gameObject.scene.IsValid()
+                || button.gameObject.scene != SceneManager.GetActiveScene()
+                || (optionPanel != null && button.transform.IsChildOf(optionPanel.transform))
+                || !IsMainMenuSettingsButton(button))
+            {
+                continue;
+            }
+
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(OpenOptions);
+        }
+    }
+
+    private static bool IsMainMenuSettingsButton(Button button)
+    {
+        if (MatchesAny(button.gameObject.name, "Settings", "Setting", "Settings Menu", "Setting Menu", "Options", "Option"))
+        {
+            return true;
+        }
+
+        foreach (TMP_Text text in button.GetComponentsInChildren<TMP_Text>(true))
+        {
+            if (text != null && MatchesAny(text.text, "Settings", "Setting", "Settings Menu", "Setting Menu", "Options", "Option"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MatchesAny(string value, params string[] candidates)
+    {
+        if (string.IsNullOrWhiteSpace(value) || candidates == null)
+        {
+            return false;
+        }
+
+        string normalized = value.Trim();
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (string.Equals(normalized, candidates[i], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void RegisterTabButton(Button button, OptionTab tab)
@@ -613,6 +737,17 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             closeButton.onClick.RemoveAllListeners();
             closeButton.onClick.AddListener(ResumeGame);
+        }
+
+        foreach (Button button in FindComponentsOrChild<Button>("Close", "X", "Back"))
+        {
+            if (button == null || button == closeButton)
+            {
+                continue;
+            }
+
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(ResumeGame);
         }
     }
 
@@ -869,6 +1004,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         RegisterInfoTarget("Resolution text", "Resolution", "Changes the game output resolution. Higher resolutions look sharper but cost more GPU performance.", null);
         RegisterInfoTarget("Full screen", "Full Screen", "Switches between fullscreen window mode and windowed mode. Slider value 0 is On, 1 is Off.", null);
         RegisterInfoTarget("V-Sync", "V-Sync", "Synchronizes rendering with the display refresh rate to reduce tearing. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("Physics", "Vegetation Physics", "Controls foliage wind animation from Wind Zone and CTI shader wind. Turning it off freezes tree and billboard wind movement. Slider value 0 is On, 1 is Off.", null);
+        RegisterInfoTarget("Physics text", "Vegetation Physics", "Controls foliage wind animation from Wind Zone and CTI shader wind. Turning it off freezes tree and billboard wind movement. Slider value 0 is On, 1 is Off.", null);
 
         RegisterInfoTarget("Line Quality", "Quality", "Rendering quality settings that affect visual detail and performance.", null);
         RegisterInfoTarget("Quality Preset text", "Quality Preset", "Applies one of Unity's project quality presets.", null);
@@ -1002,8 +1139,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void OpenOptions()
     {
-        if (playerHealth != null && playerHealth.IsDead)
+        if (!boundToMainMenu && playerHealth != null && playerHealth.IsDead)
         {
+            return;
+        }
+
+        if (boundToMainMenu)
+        {
+            OpenMainMenuOptions();
             return;
         }
 
@@ -1017,9 +1160,20 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         PlayOptionOpenAnimation();
     }
 
+    public void OpenOptionsFromUI()
+    {
+        OpenOptions();
+    }
+
     public void ResumeGame()
     {
-        if (playerHealth != null && playerHealth.IsDead)
+        if (boundToMainMenu)
+        {
+            CloseMainMenuOptions();
+            return;
+        }
+
+        if (!boundToMainMenu && playerHealth != null && playerHealth.IsDead)
         {
             CloseForPlayerDeath();
             return;
@@ -1033,6 +1187,44 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         HideConfirmation();
         optionsOpen = false;
         PlayOptionCloseAnimation(true);
+    }
+
+    private void OpenMainMenuOptions()
+    {
+        if (optionPanel == null)
+        {
+            return;
+        }
+
+        mainMenuSelectMenuWasActiveBeforeOptions = mainMenuSelectMenu != null && mainMenuSelectMenu.activeSelf;
+        if (mainMenuSelectMenu != null)
+        {
+            mainMenuSelectMenu.SetActive(false);
+        }
+
+        suppressChangeDetection = true;
+        LoadAppliedValues();
+        suppressChangeDetection = false;
+        SetPendingChanges(false);
+        optionsOpen = true;
+        optionPanel.SetActive(true);
+        SelectOptionTab(selectedTab);
+        RefreshOptionNavigation(true);
+    }
+
+    private void CloseMainMenuOptions()
+    {
+        HideConfirmation();
+        optionsOpen = false;
+        if (optionPanel != null)
+        {
+            optionPanel.SetActive(false);
+        }
+
+        if (mainMenuSelectMenu != null)
+        {
+            mainMenuSelectMenu.SetActive(true);
+        }
     }
 
     private void PlayOptionOpenAnimation()
@@ -1189,6 +1381,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         CacheOptionAnimationState();
         optionsOpen = open;
+        if (boundToMainMenu)
+        {
+            optionPanel?.SetActive(open);
+            return;
+        }
+
         if (open)
         {
             optionPanel?.SetActive(true);
@@ -1252,6 +1450,20 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         ApplyPostProcessingSettings();
         ApplyAudioSettings();
         PlayerPrefs.Save();
+        SetPendingChanges(false);
+    }
+
+    private void ApplySettingsOnceForScene(Scene scene)
+    {
+        if (!scene.IsValid() || lastAppliedSettingsSceneHandle == scene.handle)
+        {
+            return;
+        }
+
+        lastAppliedSettingsSceneHandle = scene.handle;
+        suppressChangeDetection = true;
+        ApplySettings();
+        suppressChangeDetection = false;
         SetPendingChanges(false);
     }
 
@@ -1555,6 +1767,14 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void SetControlsFrozen(bool frozen)
     {
+        if (boundToMainMenu)
+        {
+            controlsFrozen = false;
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+            return;
+        }
+
         if (frozen == controlsFrozen)
         {
             return;
@@ -1644,8 +1864,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         if (textureDropdown != null)
         {
-            QualitySettings.globalTextureMipmapLimit = Mathf.Clamp(textureDropdown.value, 0, 3);
-            PlayerPrefs.SetInt(TextureKey, textureDropdown.value);
+            int textureQuality = Mathf.Clamp(textureDropdown.value, 0, 3);
+            QualitySettings.globalTextureMipmapLimit = textureQuality;
+            ApplyVegetationTextureQuality(textureQuality, false);
+            PlayerPrefs.SetInt(TextureKey, textureQuality);
         }
 
         if (vSyncToggle != null || vSyncSlider != null)
@@ -1658,6 +1880,11 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (fullscreenToggle != null || fullscreenSlider != null)
         {
             PlayerPrefs.SetInt(FullscreenKey, GetPostProcessingControlValue(fullscreenToggle, fullscreenSlider) ? 1 : 0);
+        }
+
+        if (foliagePhysicsToggle != null || foliagePhysicsSlider != null)
+        {
+            ApplyFoliagePhysicsFromControls(true);
         }
 
     }
@@ -1816,6 +2043,9 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetToggleValue(fullscreenToggle, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
         SetPostProcessingSliderValue(vSyncSlider, PlayerPrefs.GetInt(VSyncKey, QualitySettings.vSyncCount > 0 ? 1 : 0) == 1);
         SetPostProcessingSliderValue(fullscreenSlider, PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1);
+        bool foliagePhysicsActive = PlayerPrefs.GetInt(FoliagePhysicsKey, 1) == 1;
+        SetToggleValue(foliagePhysicsToggle, foliagePhysicsActive);
+        SetPostProcessingSliderValue(foliagePhysicsSlider, foliagePhysicsActive);
 
         SetSensitivityValue(cameraSensitivitySlider, PlayerPrefs.GetFloat(CameraSensitivityKey, DefaultCameraSensitivity));
         SetSensitivityValue(aimSensitivitySlider, PlayerPrefs.GetFloat(AimSensitivityKey, DefaultAimSensitivity));
@@ -1941,6 +2171,22 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
         toggle.onValueChanged.RemoveAllListeners();
         toggle.onValueChanged.AddListener(_ => NotifyGraphicsManualChanged());
+    }
+
+    private void RegisterVegetationTexturePreviewListener(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null)
+        {
+            return;
+        }
+
+        dropdown.onValueChanged.AddListener(_ =>
+        {
+            if (!suppressChangeDetection)
+            {
+                ApplyVegetationTextureQualityFromControls(false);
+            }
+        });
     }
 
     private void RegisterChangeListener(Slider slider)
@@ -2370,6 +2616,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 SetDropdownValue(textureDropdown, 2);
                 SetToggleValue(vSyncToggle, false);
                 SetPostProcessingSliderValue(vSyncSlider, false);
+                SetPostProcessingValue(foliagePhysicsToggle, foliagePhysicsSlider, false);
                 SetPostProcessingValue(bloomToggle, bloomSlider, false);
                 SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
                 SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, false);
@@ -2382,6 +2629,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 SetDropdownValue(textureDropdown, 1);
                 SetToggleValue(vSyncToggle, false);
                 SetPostProcessingSliderValue(vSyncSlider, false);
+                SetPostProcessingValue(foliagePhysicsToggle, foliagePhysicsSlider, true);
                 SetPostProcessingValue(bloomToggle, bloomSlider, true);
                 SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
                 SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, false);
@@ -2394,6 +2642,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 SetDropdownValue(textureDropdown, 0);
                 SetToggleValue(vSyncToggle, true);
                 SetPostProcessingSliderValue(vSyncSlider, true);
+                SetPostProcessingValue(foliagePhysicsToggle, foliagePhysicsSlider, true);
                 SetPostProcessingValue(bloomToggle, bloomSlider, true);
                 SetPostProcessingValue(motionBlurToggle, motionBlurSlider, false);
                 SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, true);
@@ -2406,6 +2655,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 SetDropdownValue(textureDropdown, 0);
                 SetToggleValue(vSyncToggle, true);
                 SetPostProcessingSliderValue(vSyncSlider, true);
+                SetPostProcessingValue(foliagePhysicsToggle, foliagePhysicsSlider, true);
                 SetPostProcessingValue(bloomToggle, bloomSlider, true);
                 SetPostProcessingValue(motionBlurToggle, motionBlurSlider, true);
                 SetPostProcessingValue(depthOfFieldToggle, depthOfFieldSlider, true);
@@ -2413,6 +2663,8 @@ public sealed class InGameOptionsMenu : MonoBehaviour
                 SetPostProcessingValue(filmGrainToggle, filmGrainSlider, true);
                 break;
         }
+
+        ApplyVegetationTextureQualityFromControls(false);
     }
 
     private static List<string> GetQualityPresetLabels()
@@ -2517,6 +2769,57 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         SetPostProcessingSliderValue(slider, active);
     }
 
+    private void ApplyFoliagePhysicsFromControls(bool save)
+    {
+        if (foliagePhysicsToggle == null && foliagePhysicsSlider == null)
+        {
+            return;
+        }
+
+        bool foliagePhysicsActive = GetPostProcessingControlValue(foliagePhysicsToggle, foliagePhysicsSlider);
+        VegetationWindSettings windSettings = FindAnyObjectByType<VegetationWindSettings>(FindObjectsInactive.Include);
+        if (windSettings == null && optionPanel != null)
+        {
+            windSettings = optionPanel.GetComponent<VegetationWindSettings>();
+            if (windSettings == null)
+            {
+                windSettings = optionPanel.AddComponent<VegetationWindSettings>();
+            }
+        }
+
+        windSettings?.SetEnabled(foliagePhysicsActive, save);
+        ApplyVegetationTextureQualityFromControls(false);
+        if (save)
+        {
+            PlayerPrefs.SetInt(FoliagePhysicsKey, foliagePhysicsActive ? 1 : 0);
+        }
+    }
+
+    private void ApplyVegetationTextureQualityFromControls(bool save)
+    {
+        if (textureDropdown == null)
+        {
+            return;
+        }
+
+        ApplyVegetationTextureQuality(Mathf.Clamp(textureDropdown.value, 0, 3), save);
+    }
+
+    private void ApplyVegetationTextureQuality(int textureQuality, bool save)
+    {
+        VegetationWindSettings windSettings = FindAnyObjectByType<VegetationWindSettings>(FindObjectsInactive.Include);
+        if (windSettings == null && optionPanel != null)
+        {
+            windSettings = optionPanel.GetComponent<VegetationWindSettings>();
+            if (windSettings == null)
+            {
+                windSettings = optionPanel.AddComponent<VegetationWindSettings>();
+            }
+        }
+
+        windSettings?.ApplyTextureQuality(textureQuality, save);
+    }
+
     private void SetPendingChanges(bool pending)
     {
         hasPendingChanges = pending;
@@ -2561,6 +2864,43 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         {
             toggle.SetIsOnWithoutNotify(value);
         }
+    }
+
+    private GameObject FindChildGameObject(params string[] objectNames)
+    {
+        if (objectNames == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < objectNames.Length; i++)
+        {
+            Transform transform = FindTransform(objectNames[i]);
+            if (transform != null)
+            {
+                return transform.gameObject;
+            }
+        }
+
+        return null;
+    }
+
+    private static GameObject FindNamedChild(Transform root, string childName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(childName))
+        {
+            return null;
+        }
+
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (child != root && string.Equals(child.name, childName, StringComparison.OrdinalIgnoreCase))
+            {
+                return child.gameObject;
+            }
+        }
+
+        return null;
     }
 
     private GameObject FindSceneObject(string objectName)

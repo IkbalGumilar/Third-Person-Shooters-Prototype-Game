@@ -146,6 +146,25 @@ public class PlayerMeleeController : MonoBehaviour
         currentStealthTarget = FindBestStealthTarget();
         UpdateStealthPrompt(currentStealthTarget);
 
+        if (MobileInputBridge.ConsumeMelee())
+        {
+            if (playerShoot != null && playerShoot.currentWeapon != null)
+            {
+                if (TryStealthMelee())
+                {
+                    return;
+                }
+
+                TryMeleeAttack(true);
+            }
+            else
+            {
+                TryMeleeAttack(false);
+            }
+
+            return;
+        }
+
         if (IsPhysicalMeleePressedThisFrame())
         {
             TryMeleeAttack(false);

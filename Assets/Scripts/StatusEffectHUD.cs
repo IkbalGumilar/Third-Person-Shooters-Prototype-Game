@@ -242,7 +242,7 @@ public class StatusEffectHUD : MonoBehaviour
             PlayerHUD playerHud = FindAnyObjectByType<PlayerHUD>();
             if (playerHud != null)
             {
-                Transform status = playerHud.transform.Find("Health/Status");
+                Transform status = FindDeepChildPath(playerHud.transform, "Health/Status");
                 statusRoot = status != null ? status.GetComponent<RectTransform>() : null;
             }
         }
@@ -253,6 +253,52 @@ public class StatusEffectHUD : MonoBehaviour
         }
 
         EnsureTemplate();
+    }
+
+    Transform FindDeepChildPath(Transform root, string path)
+    {
+        if (root == null || string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        Transform direct = root.Find(path);
+        if (direct != null)
+        {
+            return direct;
+        }
+
+        string[] parts = path.Split('/');
+        return FindDeepChildPath(root, parts, 0);
+    }
+
+    Transform FindDeepChildPath(Transform root, string[] parts, int partIndex)
+    {
+        if (root == null || parts == null || partIndex >= parts.Length)
+        {
+            return root;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == parts[partIndex])
+            {
+                Transform found = FindDeepChildPath(child, parts, partIndex + 1);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            Transform nested = FindDeepChildPath(child, parts, partIndex);
+            if (nested != null)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     TMP_Text FindEffectText()

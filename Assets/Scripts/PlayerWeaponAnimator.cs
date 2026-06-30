@@ -1163,7 +1163,8 @@ public class PlayerWeaponAnimator : MonoBehaviour
 
     bool IsAimPressed()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed();
+        return MobileInputBridge.AimHeld
+            || kontrolPemain != null && kontrolPemain.Pemain.Aim.IsPressed();
     }
 
     IEnumerator FadeSingleLayer(int layerIndex, float targetWeight, float duration)

@@ -132,7 +132,8 @@ public class PlayerBlockController : MonoBehaviour
 
     bool IsBlockPressed()
     {
-        return kontrolPemain != null && kontrolPemain.Pemain.Block.IsPressed();
+        return MobileInputBridge.BlockHeld
+            || kontrolPemain != null && kontrolPemain.Pemain.Block.IsPressed();
     }
 
     bool CanReadInput()
