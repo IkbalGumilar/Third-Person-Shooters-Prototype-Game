@@ -9,6 +9,7 @@ public class LocalizationManager : MonoBehaviour
     public static event Action LanguageChanged;
     public static LocalizationManager Instance { get; private set; }
     public static GameLanguage CurrentLanguage => Instance != null ? Instance.currentLanguage : GameLanguage.English;
+    public static int LanguageCount => Enum.GetValues(typeof(GameLanguage)).Length;
 
     [SerializeField] private LocalizationTable table;
     [SerializeField] private GameLanguage currentLanguage = GameLanguage.English;
@@ -26,6 +27,16 @@ public class LocalizationManager : MonoBehaviour
         }
 
         return Instance.table.GetText(key, Instance.currentLanguage);
+    }
+
+    public static string GetText(string englishText)
+    {
+        if (Instance == null || Instance.table == null)
+        {
+            return englishText;
+        }
+
+        return Instance.table.GetTextByEnglish(englishText, Instance.currentLanguage);
     }
 
     public void SetTable(LocalizationTable localizationTable)
@@ -61,7 +72,12 @@ public class LocalizationManager : MonoBehaviour
             return;
         }
 
-        SetLanguage((GameLanguage)Mathf.Clamp(index, 0, Enum.GetValues(typeof(GameLanguage)).Length - 1));
+        SetLanguage(IndexToLanguage(index));
+    }
+
+    public static GameLanguage IndexToLanguage(int index)
+    {
+        return (GameLanguage)Mathf.Clamp(index, 0, LanguageCount - 1);
     }
 
     public void BindDropdown(TMP_Dropdown dropdown)

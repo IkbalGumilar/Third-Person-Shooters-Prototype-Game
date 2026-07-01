@@ -23,6 +23,7 @@ public class LocalizationTable : ScriptableObject
     public LocalizedTextEntry[] entries;
 
     private Dictionary<string, LocalizedTextEntry> lookup;
+    private Dictionary<string, LocalizedTextEntry> englishLookup;
 
     public string GetText(string key, GameLanguage language)
     {
@@ -46,6 +47,34 @@ public class LocalizationTable : ScriptableObject
         return string.IsNullOrEmpty(text) ? key : text;
     }
 
+    public string GetTextByEnglish(string englishText, GameLanguage language)
+    {
+        if (string.IsNullOrWhiteSpace(englishText))
+        {
+            return string.Empty;
+        }
+
+        EnsureLookup();
+        if (!englishLookup.TryGetValue(englishText, out LocalizedTextEntry entry))
+        {
+            return englishText;
+        }
+
+        string text = language == GameLanguage.Indonesian ? entry.indonesian : entry.english;
+        if (string.IsNullOrEmpty(text))
+        {
+            text = englishText;
+        }
+
+        return text;
+    }
+
+    public void ClearLookupCache()
+    {
+        lookup = null;
+        englishLookup = null;
+    }
+
     private LocalizedTextEntry GetEntry(string key)
     {
         EnsureLookup();
@@ -61,6 +90,7 @@ public class LocalizationTable : ScriptableObject
         }
 
         lookup = new Dictionary<string, LocalizedTextEntry>();
+        englishLookup = new Dictionary<string, LocalizedTextEntry>();
         if (entries == null)
         {
             return;
@@ -75,11 +105,15 @@ public class LocalizationTable : ScriptableObject
             }
 
             lookup[entry.key] = entry;
+            if (!string.IsNullOrWhiteSpace(entry.english) && !englishLookup.ContainsKey(entry.english))
+            {
+                englishLookup[entry.english] = entry;
+            }
         }
     }
 
     private void OnValidate()
     {
-        lookup = null;
+        ClearLookupCache();
     }
 }

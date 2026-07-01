@@ -21,6 +21,12 @@ public sealed class ParticleAutoDespawn : MonoBehaviour
 
     private void Despawn()
     {
-        LeanPool.Despawn(gameObject);
+        if (LeanPool.Links.ContainsKey(gameObject))
+        {
+            LeanPool.Despawn(gameObject);
+            return;
+        }
+
+        Destroy(gameObject);
     }
 }

@@ -241,6 +241,7 @@ public sealed class VegetationWindSettings : MonoBehaviour
                 terrainRenderDefaults[terrain] = state;
             }
 
+            terrain.ignoreQualitySettings = true;
             terrain.treeDistance = state.treeDistance * distanceMultiplier;
             terrain.treeBillboardDistance = state.treeBillboardDistance * distanceMultiplier;
             terrain.treeCrossFadeLength = state.treeCrossFadeLength * distanceMultiplier;

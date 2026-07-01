@@ -100,7 +100,7 @@ public class InventoryGridUI : MonoBehaviour
     public float lowHealthPromptInterval = 2f;
     public TMP_Text pickupPromptText;
     public bool createPickupPromptIfMissing = true;
-    public string pickupPromptFormat = "{0} - Ambil {1}";
+    public string pickupPromptFormat = "{0} - Take {1}";
     public Color pickupPromptColor = Color.white;
 
     [Header("Freeze Controls")]
@@ -843,7 +843,7 @@ public class InventoryGridUI : MonoBehaviour
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
 
-        CreateContextButton("Gunakan", () =>
+        CreateContextButton("Use", () =>
         {
             UseInventoryItem(contextMenuItemIndex);
             CloseContextMenu();
@@ -894,8 +894,13 @@ public class InventoryGridUI : MonoBehaviour
         textRect.offsetMax = new Vector2(-8f, 0f);
 
         TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-        text.text = label;
+        text.text = LocalizationManager.GetText(label);
         text.fontSize = 18f;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 10f;
+        text.fontSizeMax = 18f;
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Ellipsis;
         text.alignment = TextAlignmentOptions.Center;
         text.color = contextMenuTextColor;
         text.raycastTarget = false;
@@ -1723,7 +1728,8 @@ public class InventoryGridUI : MonoBehaviour
         }
 
         UseConsumableItem(entry, itemIndex);
-        ShowNotification($"Used {item.DisplayName}");
+        string localizedItemName = LocalizationManager.GetText(item.DisplayName);
+        ShowNotification(string.Format(LocalizationManager.GetText("Used {0}"), localizedItemName));
         nextLowHealthPromptTime = Time.unscaledTime + Mathf.Max(0.1f, lowHealthPromptInterval);
         SyncInventoryToPlayerEquip();
         Refresh();
@@ -1982,10 +1988,12 @@ public class InventoryGridUI : MonoBehaviour
 
         activePickupPrompt = pickup;
         string amountText = amount > 1 ? $" x{amount}" : string.Empty;
+        string promptFormat = string.IsNullOrEmpty(pickupPromptFormat) ? "{0} - Take {1}" : pickupPromptFormat;
+        string localizedItemName = LocalizationManager.GetText(itemName);
         pickupPromptText.text = string.Format(
-            string.IsNullOrEmpty(pickupPromptFormat) ? "{0} - Ambil {1}" : pickupPromptFormat,
+            LocalizationManager.GetText(promptFormat),
             key,
-            $"{itemName}{amountText}"
+            $"{localizedItemName}{amountText}"
         );
         pickupPromptText.color = pickupPromptColor;
         pickupPromptText.gameObject.SetActive(true);
@@ -2008,7 +2016,7 @@ public class InventoryGridUI : MonoBehaviour
 
     IEnumerator NotificationRoutine(string message)
     {
-        notificationText.text = string.IsNullOrEmpty(message) ? inventoryFullMessage : message;
+        notificationText.text = LocalizationManager.GetText(string.IsNullOrEmpty(message) ? inventoryFullMessage : message);
         notificationText.color = notificationColor;
         notificationText.gameObject.SetActive(true);
 
@@ -2679,7 +2687,7 @@ public class InventoryGridUI : MonoBehaviour
         notificationText.fontSize = 32f;
         notificationText.raycastTarget = false;
         notificationText.color = notificationColor;
-        notificationText.text = inventoryFullMessage;
+        notificationText.text = LocalizationManager.GetText(inventoryFullMessage);
         notificationText.gameObject.SetActive(false);
     }
 

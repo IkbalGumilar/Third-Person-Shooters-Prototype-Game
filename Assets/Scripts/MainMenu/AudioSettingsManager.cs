@@ -13,7 +13,7 @@ public sealed class AudioSettingsManager : MonoBehaviour
     private const string SfxVolumeKey = "Audio.SfxVolume";
     private const string UiVolumeKey = "Audio.UiVolume";
     private const string MixerKey = "Audio.MixerPreset";
-    private const string LanguageKey = "Audio.Language";
+    private const string LanguageKey = "Localization.Language";
     private const string SpeakerModeKey = "Audio.SpeakerMode";
     private const string MuteKey = "Audio.Mute";
 
@@ -129,6 +129,7 @@ public sealed class AudioSettingsManager : MonoBehaviour
         PopulateDropdown(languageDropdown, languageOptions);
         PopulateDropdown(speakerModeDropdown, GetSpeakerModeLabels());
         RestoreSavedValues();
+        BindLocalizationDropdown();
         suppressCallbacks = false;
         RegisterCallbacks();
         ApplySettings();
@@ -169,6 +170,7 @@ public sealed class AudioSettingsManager : MonoBehaviour
         }
         if (languageDropdown != null)
         {
+            ApplyLocalizationLanguage(languageDropdown.value);
             PlayerPrefs.SetInt(LanguageKey, languageDropdown.value);
         }
         if (speakerModeDropdown != null)
@@ -313,6 +315,26 @@ public sealed class AudioSettingsManager : MonoBehaviour
         ApplySettings();
     }
 
+    private void BindLocalizationDropdown()
+    {
+        if (languageDropdown == null || LocalizationManager.Instance == null)
+        {
+            return;
+        }
+
+        LocalizationManager.Instance.BindDropdown(languageDropdown);
+    }
+
+    private static void ApplyLocalizationLanguage(int dropdownValue)
+    {
+        if (LocalizationManager.Instance == null)
+        {
+            return;
+        }
+
+        LocalizationManager.Instance.SetLanguage(LocalizationManager.IndexToLanguage(dropdownValue));
+    }
+
     private void ApplyMixerVolume(string parameterName, float normalizedVolume)
     {
         if (audioMixer == null || string.IsNullOrWhiteSpace(parameterName))
@@ -400,7 +422,13 @@ public sealed class AudioSettingsManager : MonoBehaviour
         }
 
         dropdown.ClearOptions();
-        dropdown.AddOptions(new List<string>(options));
+        List<string> localizedOptions = new List<string>(options.Count);
+        for (int i = 0; i < options.Count; i++)
+        {
+            localizedOptions.Add(LocalizationManager.GetText(options[i]));
+        }
+
+        dropdown.AddOptions(localizedOptions);
     }
 
     private static float GetVolume(Slider slider, float fallback)

@@ -190,7 +190,7 @@ public static class AntiAliasingSettingsUtility
     private static void ApplyMsaa(int samples)
     {
         QualitySettings.antiAliasing = samples;
-        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include);
         for (int i = 0; i < cameras.Length; i++)
         {
             cameras[i].allowMSAA = samples > 0;
@@ -227,7 +227,7 @@ public static class AntiAliasingSettingsUtility
 
     private static void DisableFxaa()
     {
-        RuntimeFxaaEffect[] effects = UnityEngine.Object.FindObjectsByType<RuntimeFxaaEffect>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        RuntimeFxaaEffect[] effects = UnityEngine.Object.FindObjectsByType<RuntimeFxaaEffect>(FindObjectsInactive.Include);
         for (int i = 0; i < effects.Length; i++)
         {
             if (effects[i] != null)
@@ -308,7 +308,7 @@ public static class AntiAliasingSettingsUtility
 
     private static void ApplyCameraAntialiasing(params string[] enumNames)
     {
-        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include);
         for (int i = 0; i < cameras.Length; i++)
         {
             Component additionalData = GetAdditionalCameraData(cameras[i]);

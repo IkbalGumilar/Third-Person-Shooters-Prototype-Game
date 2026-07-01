@@ -32,7 +32,7 @@ public sealed class UIAudioController : MonoBehaviour
     [SerializeField] private bool playKeyboardSelect = true;
     [SerializeField] private bool playCancelInput = true;
 
-    private readonly HashSet<int> boundSelectables = new();
+    private readonly HashSet<Selectable> boundSelectables = new();
     private AudioSource audioSource;
     private GameObject lastSelectedObject;
     private float nextSelectTime;
@@ -96,8 +96,7 @@ public sealed class UIAudioController : MonoBehaviour
                 continue;
             }
 
-            int id = selectable.GetInstanceID();
-            if (!boundSelectables.Add(id))
+            if (!boundSelectables.Add(selectable))
             {
                 continue;
             }

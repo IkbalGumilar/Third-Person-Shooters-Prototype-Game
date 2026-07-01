@@ -312,21 +312,21 @@ public class BossEncounterDirector : MonoBehaviour
         InGameOptionsMenu.SetInputBlocked(true);
         DeactivateMissionClearObjects();
 
-        InventoryGridUI inventory = FindFirstObjectByType<InventoryGridUI>();
+        InventoryGridUI inventory = FindAnyObjectByType<InventoryGridUI>();
         if (inventory != null)
         {
             inventory.SetOpen(false);
             DisableBehaviourForClear(inventory);
         }
 
-        InGameOptionsMenu inGameOptions = FindFirstObjectByType<InGameOptionsMenu>();
+        InGameOptionsMenu inGameOptions = FindAnyObjectByType<InGameOptionsMenu>();
         if (inGameOptions != null)
         {
             inGameOptions.ResumeGame();
             DisableBehaviourForClear(inGameOptions);
         }
 
-        PlayerMovement movement = FindFirstObjectByType<PlayerMovement>();
+        PlayerMovement movement = FindAnyObjectByType<PlayerMovement>();
         if (movement != null)
         {
             movement.allowInput = false;
@@ -335,19 +335,19 @@ public class BossEncounterDirector : MonoBehaviour
             movement.statusBlocksJump = true;
         }
 
-        CameraControler cameraControler = FindFirstObjectByType<CameraControler>();
+        CameraControler cameraControler = FindAnyObjectByType<CameraControler>();
         if (cameraControler != null)
         {
             cameraControler.allowLookInput = false;
         }
 
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerShoot>());
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerMeleeController>());
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerBlockController>());
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerWeaponEquip>());
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerScopeController>());
-        DisableBehaviourForClear(FindFirstObjectByType<PlayerAimIK>());
-        DisableBehaviourForClear(FindFirstObjectByType<CursorController>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerShoot>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerMeleeController>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerBlockController>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerWeaponEquip>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerScopeController>());
+        DisableBehaviourForClear(FindAnyObjectByType<PlayerAimIK>());
+        DisableBehaviourForClear(FindAnyObjectByType<CursorController>());
 
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
@@ -393,7 +393,7 @@ public class BossEncounterDirector : MonoBehaviour
 
         if (missionClearText != null)
         {
-            missionClearText.text = missionClearMessage;
+            missionClearText.text = LocalizationManager.GetText(missionClearMessage);
         }
 
         SetMissionClearVisible(true);
@@ -680,7 +680,15 @@ public class BossEncounterDirector : MonoBehaviour
             }
         }
 
-        Debug.LogWarning("[BossEncounterDirector] Could not find a NavMesh spawn position at the requested boss radius. Falling back to director position.", this);
+        Vector3 fallbackDirection = spawnBehindPlayer && player != null ? GetFlatBehindDirection() : transform.forward;
+        Vector3 fallbackCandidate = center + fallbackDirection * Mathf.Max(minDistance, radius);
+        float fallbackSampleDistance = Mathf.Max(navMeshSampleDistance, radius, 1f);
+        if (NavMesh.SamplePosition(fallbackCandidate, out NavMeshHit fallbackHit, fallbackSampleDistance, NavMesh.AllAreas))
+        {
+            return fallbackHit.position;
+        }
+
+        Debug.LogWarning("[BossEncounterDirector] Could not find a NavMesh spawn position near the player. Falling back to director position.", this);
         return transform.position;
     }
 
@@ -792,7 +800,7 @@ public class BossEncounterDirector : MonoBehaviour
             textRect.offsetMax = new Vector2(-24f, 0f);
 
             TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-            text.text = missionClearMessage;
+        text.text = LocalizationManager.GetText(missionClearMessage);
             text.color = missionClearTextColor;
             text.fontStyle = FontStyles.Bold;
             text.fontSize = 64f;
@@ -892,7 +900,7 @@ public class BossEncounterDirector : MonoBehaviour
         clearCamera = Camera.main;
         if (clearCamera == null)
         {
-            clearCamera = FindFirstObjectByType<Camera>();
+            clearCamera = FindAnyObjectByType<Camera>();
         }
 
         return clearCamera;
@@ -1008,7 +1016,7 @@ public class BossEncounterDirector : MonoBehaviour
             rect.sizeDelta = new Vector2(-80f, 60f);
 
             TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-            text.text = pressAnyButtonMessage;
+            text.text = LocalizationManager.GetText(pressAnyButtonMessage);
             text.color = Color.white;
             text.fontStyle = FontStyles.Bold;
             text.fontSize = 28f;
@@ -1081,7 +1089,7 @@ public class BossEncounterDirector : MonoBehaviour
         textRect.offsetMax = Vector2.zero;
 
         TextMeshProUGUI text = creditTextObject.GetComponent<TextMeshProUGUI>();
-        text.text = "THIRD-PERSON SHOOTERS PROTOTYPE GAME\n\nCreated by Ikbal Gumilar\n\nThanks for playing";
+        text.text = LocalizationManager.GetText("THIRD-PERSON SHOOTERS PROTOTYPE GAME\n\nCreated by Ikbal Gumilar\n\nThanks for playing");
         text.color = Color.white;
         text.fontSize = 34f;
         text.alignment = TextAlignmentOptions.Center;
@@ -1230,7 +1238,7 @@ public class BossEncounterDirector : MonoBehaviour
         }
 
         pressAnyButtonText.gameObject.SetActive(visible);
-        pressAnyButtonText.text = pressAnyButtonMessage;
+        pressAnyButtonText.text = LocalizationManager.GetText(pressAnyButtonMessage);
         Color color = pressAnyButtonText.color;
         color.a = Mathf.Clamp01(alpha);
         pressAnyButtonText.color = color;
@@ -1238,7 +1246,7 @@ public class BossEncounterDirector : MonoBehaviour
 
     Canvas GetOrCreateCanvas(string canvasName)
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindAnyObjectByType<Canvas>();
         if (canvas != null)
         {
             return canvas;
@@ -1327,7 +1335,7 @@ public class BossEncounterDirector : MonoBehaviour
         EnsureWarningUI();
         if (warningText != null)
         {
-            warningText.text = warningMessage;
+            warningText.text = LocalizationManager.GetText(warningMessage);
         }
 
         PlayWarningIntro();
@@ -1363,7 +1371,7 @@ public class BossEncounterDirector : MonoBehaviour
             return;
         }
 
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindAnyObjectByType<Canvas>();
         if (canvas == null)
         {
             GameObject canvasObject = new GameObject("Boss Warning Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -1402,7 +1410,7 @@ public class BossEncounterDirector : MonoBehaviour
 
         TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
         text.raycastTarget = false;
-        text.text = warningMessage;
+        text.text = LocalizationManager.GetText(warningMessage);
         text.color = warningTextColor;
         text.fontSize = warningFontSize;
         text.fontStyle = FontStyles.Bold;
@@ -1643,7 +1651,7 @@ public class BossEncounterDirector : MonoBehaviour
             return;
         }
 
-        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        PlayerHealth playerHealth = FindAnyObjectByType<PlayerHealth>();
         if (playerHealth != null)
         {
             player = playerHealth.transform;

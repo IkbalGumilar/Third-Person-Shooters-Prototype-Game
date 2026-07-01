@@ -149,7 +149,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     private bool optionAnimationStateCached;
     private bool optionsOpen;
     private bool boundToMainMenu;
-    private int lastAppliedSettingsSceneHandle = int.MinValue;
+    private ulong lastAppliedSettingsSceneHandle = ulong.MaxValue;
     private GameObject mainMenuSelectMenu;
     private bool mainMenuSelectMenuWasActiveBeforeOptions;
     private PlayerHealth playerHealth;
@@ -1119,12 +1119,12 @@ public sealed class InGameOptionsMenu : MonoBehaviour
     {
         foreach (TMP_Text titleText in FindNamedComponents<TMP_Text>("Select Text"))
         {
-            titleText.text = title;
+            titleText.text = LocalizationManager.GetText(title);
         }
 
         foreach (TMP_Text infoText in FindNamedComponents<TMP_Text>("Information Text"))
         {
-            infoText.text = info;
+            infoText.text = LocalizationManager.GetText(info);
         }
 
         if (logo != null)
@@ -1455,12 +1455,13 @@ public sealed class InGameOptionsMenu : MonoBehaviour
 
     private void ApplySettingsOnceForScene(Scene scene)
     {
-        if (!scene.IsValid() || lastAppliedSettingsSceneHandle == scene.handle)
+        ulong sceneHandle = scene.handle.GetRawData();
+        if (!scene.IsValid() || lastAppliedSettingsSceneHandle == sceneHandle)
         {
             return;
         }
 
-        lastAppliedSettingsSceneHandle = scene.handle;
+        lastAppliedSettingsSceneHandle = sceneHandle;
         suppressChangeDetection = true;
         ApplySettings();
         suppressChangeDetection = false;
@@ -1512,6 +1513,7 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         if (confirmationPanel != null)
         {
             confirmationPanel.SetActive(true);
+            RefreshLegacyLocalizedTexts(confirmationPanel);
             SelectFirstUsableControl(confirmationPanel);
         }
         else
@@ -1570,6 +1572,23 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         confirmationPanel.SetActive(false);
     }
 
+    private static void RefreshLegacyLocalizedTexts(GameObject root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        LocalizedLegacyText[] texts = root.GetComponentsInChildren<LocalizedLegacyText>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i] != null)
+            {
+                texts[i].Refresh();
+            }
+        }
+    }
+
     private static GameObject CreateUiObject(string objectName, Transform parent)
     {
         GameObject uiObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer));
@@ -1587,10 +1606,10 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         rect.anchoredPosition = position;
         Text text = textObject.AddComponent<Text>();
         text.font = font;
-        text.text = value;
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = TextAnchor.MiddleCenter;
+        textObject.AddComponent<LocalizedLegacyText>().SetEnglishText(value);
     }
 
     private static void CreateButton(string label, Transform parent, Font font, Vector2 position, Color color, UnityEngine.Events.UnityAction action)
@@ -2110,7 +2129,23 @@ public sealed class InGameOptionsMenu : MonoBehaviour
         }
 
         dropdown.ClearOptions();
-        dropdown.AddOptions(options);
+        dropdown.AddOptions(LocalizeOptions(options));
+    }
+
+    private static List<string> LocalizeOptions(List<string> options)
+    {
+        if (options == null)
+        {
+            return null;
+        }
+
+        List<string> localizedOptions = new List<string>(options.Count);
+        for (int i = 0; i < options.Count; i++)
+        {
+            localizedOptions.Add(LocalizationManager.GetText(options[i]));
+        }
+
+        return localizedOptions;
     }
 
     private void RegisterChangeListener(TMP_Dropdown dropdown)

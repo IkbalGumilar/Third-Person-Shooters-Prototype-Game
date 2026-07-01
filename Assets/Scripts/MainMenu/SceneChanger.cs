@@ -10,6 +10,7 @@ using UnityEngine.UI;
 public sealed class SceneChanger : MonoBehaviour
 {
     private static bool gameFinishedThisSession;
+    private const string MainGameScenePath = "Assets/Scenes/MainScene.unity";
 
     [Header("Scene")]
     [SerializeField] private string mainGameSceneName = "MainScene";
@@ -46,6 +47,7 @@ public sealed class SceneChanger : MonoBehaviour
     private bool isLoading;
     private bool creditFastForward;
     private Coroutine creditRoutine;
+    private string resolvedMainGameSceneIdentifier;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeGameFinishedFlag()
@@ -105,9 +107,9 @@ public sealed class SceneChanger : MonoBehaviour
         ApplyMenuSettingsBeforeSceneLoad();
         InGameOptionsMenu.SetInputBlocked(false);
 
-        if (!Application.CanStreamedLevelBeLoaded(mainGameSceneName))
+        if (!TryResolveMainGameScene(out resolvedMainGameSceneIdentifier))
         {
-            Debug.LogError($"Main game scene {mainGameSceneName} is not included in Build Settings.", this);
+            Debug.LogError($"Main game scene '{mainGameSceneName}' could not be loaded. Add '{MainGameScenePath}' to Build Settings or the active Build Profile scene list.", this);
             return;
         }
 
@@ -215,7 +217,7 @@ public sealed class SceneChanger : MonoBehaviour
         SetLoadingProgress(0f);
         yield return FadeLoadingPanel(0f, 1f);
 
-        AsyncOperation operation = SceneManager.LoadSceneAsync(mainGameSceneName, LoadSceneMode.Single);
+        AsyncOperation operation = SceneManager.LoadSceneAsync(resolvedMainGameSceneIdentifier, LoadSceneMode.Single);
         operation.allowSceneActivation = false;
 
         float displayedProgress = 0f;
@@ -242,6 +244,18 @@ public sealed class SceneChanger : MonoBehaviour
         }
 
         operation.allowSceneActivation = true;
+    }
+
+    private bool TryResolveMainGameScene(out string sceneIdentifier)
+    {
+        sceneIdentifier = mainGameSceneName;
+        if (Application.CanStreamedLevelBeLoaded(sceneIdentifier))
+        {
+            return true;
+        }
+
+        sceneIdentifier = MainGameScenePath;
+        return Application.CanStreamedLevelBeLoaded(sceneIdentifier);
     }
 
     private IEnumerator FinishedCreditRoutine()

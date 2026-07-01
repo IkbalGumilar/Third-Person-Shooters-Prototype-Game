@@ -798,7 +798,7 @@ public class PlayerMeleeController : MonoBehaviour
 
         if (stealthDolly == null)
         {
-            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include);
             for (int i = 0; i < dollies.Length; i++)
             {
                 CinemachineSplineDolly candidate = dollies[i];
@@ -818,7 +818,7 @@ public class PlayerMeleeController : MonoBehaviour
 
         if (stealthDolly == null && stealthSpline != null)
         {
-            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            CinemachineSplineDolly[] dollies = FindObjectsByType<CinemachineSplineDolly>(FindObjectsInactive.Include);
             if (dollies.Length > 0)
             {
                 stealthDolly = dollies[0];
@@ -833,7 +833,7 @@ public class PlayerMeleeController : MonoBehaviour
 
     T FindNamedSceneComponent<T>(string namePart) where T : Component
     {
-        T[] components = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        T[] components = FindObjectsByType<T>(FindObjectsInactive.Include);
         string needle = string.IsNullOrEmpty(namePart) ? string.Empty : namePart.ToLowerInvariant();
         for (int i = 0; i < components.Length; i++)
         {
@@ -1506,9 +1506,10 @@ public class PlayerMeleeController : MonoBehaviour
             return;
         }
 
-        stealthPromptText.text = string.IsNullOrEmpty(stealthPromptMessage)
+        string promptMessage = string.IsNullOrEmpty(stealthPromptMessage)
             ? "Tekan B - Stealth Melee"
             : stealthPromptMessage;
+        stealthPromptText.text = LocalizationManager.GetText(promptMessage);
         stealthPromptText.color = stealthPromptColor;
     }
 
@@ -1535,13 +1536,13 @@ public class PlayerMeleeController : MonoBehaviour
         stealthPromptText.fontSize = stealthPromptFontSize;
         stealthPromptText.raycastTarget = false;
         stealthPromptText.color = stealthPromptColor;
-        stealthPromptText.text = stealthPromptMessage;
+        stealthPromptText.text = LocalizationManager.GetText(stealthPromptMessage);
         stealthPromptText.gameObject.SetActive(false);
     }
 
     Canvas FindStealthPromptCanvas()
     {
-        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
         Canvas fallback = null;
         for (int i = 0; i < canvases.Length; i++)
         {

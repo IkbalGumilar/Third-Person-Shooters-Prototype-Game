@@ -248,7 +248,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
             options.Add($"{resolution.width} x {resolution.height} ({Mathf.RoundToInt((float)resolution.refreshRateRatio.value)} Hz)");
         }
 
-        resolutionDropdown.AddOptions(options);
+        resolutionDropdown.AddOptions(LocalizeOptions(options));
     }
 
     private void PopulateQualityOptions()
@@ -259,7 +259,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         graphicsDropdown.ClearOptions();
-        graphicsDropdown.AddOptions(GetQualityPresetLabels());
+        graphicsDropdown.AddOptions(LocalizeOptions(GetQualityPresetLabels()));
     }
 
     private void PopulateShadowOptions()
@@ -270,7 +270,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         shadowDropdown.ClearOptions();
-        shadowDropdown.AddOptions(new List<string> { "Off", "Hard Shadows", "All Shadows" });
+        shadowDropdown.AddOptions(LocalizeOptions(new List<string> { "Off", "Hard Shadows", "All Shadows" }));
     }
 
     private void PopulateAntiAliasingOptions()
@@ -281,7 +281,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         aaDropdown.ClearOptions();
-        aaDropdown.AddOptions(AntiAliasingSettingsUtility.GetOptionLabels());
+        aaDropdown.AddOptions(LocalizeOptions(AntiAliasingSettingsUtility.GetOptionLabels()));
     }
 
     private void PopulateTextureQualityOptions()
@@ -292,7 +292,7 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
         }
 
         textureDropdown.ClearOptions();
-        textureDropdown.AddOptions(new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" });
+        textureDropdown.AddOptions(LocalizeOptions(new List<string> { "Full Resolution", "Half Resolution", "Quarter Resolution", "Eighth Resolution" }));
     }
 
     private void RegisterQualityPresetListener()
@@ -422,6 +422,22 @@ public sealed class GraphicsSettingsManager : MonoBehaviour
     private static List<string> GetQualityPresetLabels()
     {
         return new List<string> { "Low", "Medium", "High", "Ultra", "Custom" };
+    }
+
+    private static List<string> LocalizeOptions(List<string> options)
+    {
+        if (options == null)
+        {
+            return null;
+        }
+
+        List<string> localizedOptions = new List<string>(options.Count);
+        for (int i = 0; i < options.Count; i++)
+        {
+            localizedOptions.Add(LocalizationManager.GetText(options[i]));
+        }
+
+        return localizedOptions;
     }
 
     private static int DetectRecommendedQualityPreset()

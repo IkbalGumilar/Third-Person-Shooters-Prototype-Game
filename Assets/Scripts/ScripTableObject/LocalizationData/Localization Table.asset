@@ -1,0 +1,1656 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b37c7a4182a4e8abf4518086268be84, type: 3}
+  m_Name: Localization Table
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizationTable
+  defaultLanguage: 0
+  entries:
+  - key: mainmenu.gamemanajemen.rawimage.credit.scroll.view.viewport.content.credit.text
+    english: 'THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+
+      Created by
+
+      Ikbal
+      Gumilar
+
+
+      Game Design
+
+      Ikbal Gumilar
+
+
+      Programming
+
+      Ikbal
+      Gumilar
+
+
+      Enemy AI System
+
+      Ikbal Gumilar
+
+
+      Weapon System
+
+      Ikbal
+      Gumilar
+
+
+      Inventory System
+
+      Ikbal Gumilar
+
+
+      UI Implementation
+
+      Ikbal
+      Gumilar
+
+
+      Animation Setup
+
+      Ikbal Gumilar
+
+
+      Level Design
+
+      Ikbal
+      Gumilar
+
+
+
+      ASSETS
+
+
+      This prototype uses a combination of:
+
+      Unity
+      Asset Store assets
+
+      Purchased assets
+
+      Modified assets
+
+      Original
+      assets created for this project
+
+
+      3D Models
+
+      Unity Asset Store
+      / Purchased Assets / Original Work
+
+
+      Animations
+
+      Unity Asset Store
+      / Purchased Assets / Modified for this prototype
+
+
+      Audio
+
+      Unity
+      Asset Store / Purchased Assets / Original Work
+
+
+      Visual Effects
+
+      Unity
+      Asset Store / Purchased Assets / Original Work
+
+
+
+      SPECIAL THANKS
+
+
+      Thanks
+      to everyone who tested, gave feedback,
+
+      or supported the development
+      of this prototype.
+
+
+
+      DISCLAIMER
+
+
+      This game is a prototype created
+      for learning,
+
+      testing gameplay systems, and development practice.
+
+
+      Some
+      assets used in this project may belong to their
+
+      respective creators
+      and are used according to their licenses.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      THANK YOU FOR
+      PLAYING'
+    indonesian: 'THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+
+      Dibuat oleh
+
+      Ikbal
+      Gumilar
+
+
+      Desain Game
+
+      Ikbal Gumilar
+
+
+      Pemrograman
+
+      Ikbal
+      Gumilar
+
+
+      Sistem AI Musuh
+
+      Ikbal Gumilar
+
+
+      Sistem Senjata
+
+      Ikbal
+      Gumilar
+
+
+      Sistem Inventaris
+
+      Ikbal Gumilar
+
+
+      Implementasi
+      UI
+
+      Ikbal Gumilar
+
+
+      Pengaturan Animasi
+
+      Ikbal Gumilar
+
+
+      Desain
+      Level
+
+      Ikbal Gumilar
+
+
+
+      ASET
+
+
+      Prototype ini menggunakan
+      kombinasi dari:
+
+      Aset Unity Asset Store
+
+      Aset yang dibeli
+
+      Aset
+      yang dimodifikasi
+
+      Aset asli yang dibuat untuk proyek ini
+
+
+      Model
+      3D
+
+      Unity Asset Store / Aset Dibeli / Karya Asli
+
+
+      Animasi
+
+      Unity
+      Asset Store / Aset Dibeli / Dimodifikasi untuk prototype ini
+
+
+      Audio
+
+      Unity
+      Asset Store / Aset Dibeli / Karya Asli
+
+
+      Efek Visual
+
+      Unity Asset
+      Store / Aset Dibeli / Karya Asli
+
+
+
+      TERIMA KASIH KHUSUS
+
+
+      Terima
+      kasih kepada semua yang telah menguji, memberi masukan,
+
+      atau mendukung
+      pengembangan prototype ini.
+
+
+
+      PERNYATAAN
+
+
+      Game ini adalah prototype
+      yang dibuat untuk belajar,
+
+      menguji sistem gameplay, dan latihan pengembangan.
+
+
+      Sebagian
+      aset yang digunakan dalam proyek ini mungkin milik
+
+      pembuatnya masing-masing
+      dan digunakan sesuai lisensinya.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      TERIMA KASIH SUDAH BERMAIN'
+  - key: mainmenu.gamemanajemen.rawimage.loading.loading.text
+    english: LOADIG......
+    indonesian: MEMUAT......
+  - key: mainmenu.gamemanajemen.rawimage.select.menu.mainmenu
+    english: Main Menu
+    indonesian: Menu Utama
+  - key: mainmenu.gamemanajemen.rawimage.select.menu.quit.button
+    english: Quit
+    indonesian: Keluar
+  - key: mainmenu.gamemanajemen.rawimage.select.menu.setting.setting
+    english: Setting
+    indonesian: Pengaturan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.default.text.tmp
+    english: Resret to Default
+    indonesian: Kembalikan ke Default
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.control.text
+    english: Master Volume
+    indonesian: Volume Utama
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.master.volume.text
+    english: Master Volume
+    indonesian: Volume Utama
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.master.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.audio.language
+    english: Audio Language
+    indonesian: Bahasa Audio
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.audio.language.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.audio.language.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.audio.options.text
+    english: Audio Options
+    indonesian: Opsi Audio
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.mute.when.unfocus
+    english: Mute When Unfocus
+    indonesian: Senyapkan Saat Tidak Fokus
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.mute.when.unfocus.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.mute.when.unfocus.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.speaker.configuration
+    english: Speaker Configuration
+    indonesian: Konfigurasi Speaker
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.speaker.configuration.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.speaker.configuration.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.subtitles
+    english: Subtitles
+    indonesian: Teks Terjemahan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.subtitles.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.audio.option.subtitles.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.ambient.volume.text
+    english: Ambient Volume
+    indonesian: Volume Ambien
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.ambient.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.mixer.text
+    english: Mixer Volume
+    indonesian: Volume Mixer
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.music.volume.text
+    english: Music Volume
+    indonesian: Volume Musik
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.music.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.sfx.volume.text
+    english: SFX Volume
+    indonesian: Volume Efek Suara
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.sfx.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.ui.volume.text
+    english: UI Volume
+    indonesian: Volume UI
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.ui.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.voice.volume.text
+    english: Voice Volume
+    indonesian: Volume Suara
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.line.mixer.voice.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.audio.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.background.controls.tab.controls.text
+    english: Controls
+    indonesian: Kontrol
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.background.graphics.tab.graphics.text
+    english: Graphics
+    indonesian: Grafis
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.background.sound.tab.audio.text
+    english: Audio
+    indonesian: Audio
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.aim.fire.text
+    english: Fire
+    indonesian: Tembak
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.aim.fire.text.image.text.tmp
+    english: Click Left
+    indonesian: Klik Kiri
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.aim.text
+    english: Aim
+    indonesian: Bidik
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.aim.text.image.text.tmp
+    english: Click Right
+    indonesian: Klik Kanan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.blocktext
+    english: Block
+    indonesian: Tangkis
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.blocktext.image.text.tmp
+    english: F
+    indonesian: F
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.crawl.text
+    english: Crawl
+    indonesian: Merangkak
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.crawl.text.image.text.tmp
+    english: Z
+    indonesian: Z
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.crouch.text
+    english: Crouch
+    indonesian: Jongkok
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.crouch.text.image.text.tmp
+    english: C
+    indonesian: C
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.inventory.text
+    english: Inventory
+    indonesian: Inventaris
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.inventory.text.image.text.tmp
+    english: I
+    indonesian: I
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.jump.text
+    english: Jump
+    indonesian: Lompat
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.jump.text.image.text.tmp
+    english: Space
+    indonesian: Spasi
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.melee.text
+    english: Melee
+    indonesian: Serangan Jarak Dekat
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.melee.text.image.text.tmp
+    english: V
+    indonesian: V
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.move.text
+    english: Move
+    indonesian: Bergerak
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.move.text.image.text.tmp
+    english: WASD
+    indonesian: WASD
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.picup.text
+    english: Pickup
+    indonesian: Ambil
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.picup.text.image.text.tmp
+    english: T
+    indonesian: T
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.roll.text
+    english: Roll
+    indonesian: Berguling
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.roll.text.image.1.text.tmp
+    english: Q
+    indonesian: Q
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.roll.text.image.text.tmp
+    english: WASD
+    indonesian: WASD
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.setting.menu.text
+    english: Setting Menu
+    indonesian: Menu Pengaturan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.setting.menu.text.image.text.tmp
+    english: Esc
+    indonesian: Esc
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.use.inventory.text
+    english: Use Item
+    indonesian: Gunakan Item
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.use.inventory.text.image.text.tmp
+    english: U
+    indonesian: U
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.weapon.meleetext
+    english: Weapon Melee
+    indonesian: Melee Senjata
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.weapon.meleetext.image.text.tmp
+    english: B
+    indonesian: B
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.zoom.scope.text
+    english: Zoom
+    indonesian: Perbesar
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.bacround.key.zoom.scope.text.image.text.tmp
+    english: Scroll Mouse
+    indonesian: Gulir Mouse
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.control.text
+    english: Control
+    indonesian: Kontrol
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.default.text.tmp
+    english: Resret to Default
+    indonesian: Kembalikan ke Default
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.invert.mose
+    english: Invert Mose
+    indonesian: Balik Mouse
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.invert.mose.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.invert.mose.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.sensitivity.aim.text
+    english: Sensitivity Aim
+    indonesian: Sensitivitas Bidik
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.line.control.sensitivity.text
+    english: Sensitivity
+    indonesian: Sensitivitas
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.control.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.display.text
+    english: Display
+    indonesian: Tampilan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.full.screen
+    english: Full Screen
+    indonesian: Layar Penuh
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.full.screen.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.full.screen.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.resolution.text
+    english: Resolution
+    indonesian: Resolusi
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.resolution.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.resolution.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.v.sync
+    english: V-Sync
+    indonesian: V-Sync
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.v.sync.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.display.v.sync.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.bloom
+    english: Bloom
+    indonesian: Bloom
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.bloom.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.bloom.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.chromatic
+    english: Chromatic
+    indonesian: Kromatik
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.chromatic.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.chromatic.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.dof
+    english: DOF
+    indonesian: Kedalaman Fokus
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.dof.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.dof.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.film.gain
+    english: Film Gain
+    indonesian: Butiran Film
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.film.gain.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.film.gain.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.motion.blur
+    english: Motion Blur
+    indonesian: Blur Gerakan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.motion.blur.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.motion.blur.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.post.prosesing.post.prosesing.text
+    english: Post Prosesing
+    indonesian: Pasca-Proses
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.anti.aliasing.text
+    english: Anti-Aliasing
+    indonesian: Anti-Aliasing
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.anti.aliasing.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.anti.aliasing.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.display.text
+    english: Quality
+    indonesian: Kualitas
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.physics.text
+    english: Physics
+    indonesian: Fisika
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.physics.text.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.physics.text.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.quality.preset.text
+    english: Quality Preset
+    indonesian: Preset Kualitas
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.quality.preset.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.quality.preset.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.shadow.quality.text
+    english: Shadow Quality
+    indonesian: Kualitas Bayangan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.shadow.quality.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.shadow.quality.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.texture.quality.text
+    english: Texture Quality
+    indonesian: Kualitas Tekstur
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.texture.quality.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.line.quality.texture.quality.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.ram.usage
+    english: Ram Usage
+    indonesian: Penggunaan RAM
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.ram.usage.slider.vram
+    english: --GB / --GB
+    indonesian: --GB / --GB
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.vram.usage
+    english: Vram Usage
+    indonesian: Penggunaan VRAM
+  - key: mainmenu.gamemanajemen.rawimage.select.setting.graphics.menu.vram.usage.slider.vram
+    english: --GB / --GB
+    indonesian: --GB / --GB
+  - key: mainscene.canvas.save.area.boss.health.boss.name
+    english: BOSS NAME
+    indonesian: NAMA BOSS
+  - key: mainscene.canvas.save.area.credit.scroll.view.viewport.content.credit.text
+    english: 'THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+
+      Created by
+
+      Ikbal
+      Gumilar
+
+
+      Game Design
+
+      Ikbal Gumilar
+
+
+      Programming
+
+      Ikbal
+      Gumilar
+
+
+      Enemy AI System
+
+      Ikbal Gumilar
+
+
+      Weapon System
+
+      Ikbal
+      Gumilar
+
+
+      Inventory System
+
+      Ikbal Gumilar
+
+
+      UI Implementation
+
+      Ikbal
+      Gumilar
+
+
+      Animation Setup
+
+      Ikbal Gumilar
+
+
+      Level Design
+
+      Ikbal
+      Gumilar
+
+
+
+      ASSETS
+
+
+      This prototype uses a combination of:
+
+      Unity
+      Asset Store assets
+
+      Purchased assets
+
+      Modified assets
+
+      Original
+      assets created for this project
+
+
+      3D Models
+
+      Unity Asset Store
+      / Purchased Assets / Original Work
+
+
+      Animations
+
+      Unity Asset Store
+      / Purchased Assets / Modified for this prototype
+
+
+      Audio
+
+      Unity
+      Asset Store / Purchased Assets / Original Work
+
+
+      Visual Effects
+
+      Unity
+      Asset Store / Purchased Assets / Original Work
+
+
+
+      SPECIAL THANKS
+
+
+      Thanks
+      to everyone who tested, gave feedback,
+
+      or supported the development
+      of this prototype.
+
+
+
+      DISCLAIMER
+
+
+      This game is a prototype created
+      for learning,
+
+      testing gameplay systems, and development practice.
+
+
+      Some
+      assets used in this project may belong to their
+
+      respective creators
+      and are used according to their licenses.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      THANK YOU FOR
+      PLAYING'
+    indonesian: 'THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+
+      Dibuat oleh
+
+      Ikbal
+      Gumilar
+
+
+      Desain Game
+
+      Ikbal Gumilar
+
+
+      Pemrograman
+
+      Ikbal
+      Gumilar
+
+
+      Sistem AI Musuh
+
+      Ikbal Gumilar
+
+
+      Sistem Senjata
+
+      Ikbal
+      Gumilar
+
+
+      Sistem Inventaris
+
+      Ikbal Gumilar
+
+
+      Implementasi
+      UI
+
+      Ikbal Gumilar
+
+
+      Pengaturan Animasi
+
+      Ikbal Gumilar
+
+
+      Desain
+      Level
+
+      Ikbal Gumilar
+
+
+
+      ASET
+
+
+      Prototype ini menggunakan
+      kombinasi dari:
+
+      Aset Unity Asset Store
+
+      Aset yang dibeli
+
+      Aset
+      yang dimodifikasi
+
+      Aset asli yang dibuat untuk proyek ini
+
+
+      Model
+      3D
+
+      Unity Asset Store / Aset Dibeli / Karya Asli
+
+
+      Animasi
+
+      Unity
+      Asset Store / Aset Dibeli / Dimodifikasi untuk prototype ini
+
+
+      Audio
+
+      Unity
+      Asset Store / Aset Dibeli / Karya Asli
+
+
+      Efek Visual
+
+      Unity Asset
+      Store / Aset Dibeli / Karya Asli
+
+
+
+      TERIMA KASIH KHUSUS
+
+
+      Terima
+      kasih kepada semua yang telah menguji, memberi masukan,
+
+      atau mendukung
+      pengembangan prototype ini.
+
+
+
+      PERNYATAAN
+
+
+      Game ini adalah prototype
+      yang dibuat untuk belajar,
+
+      menguji sistem gameplay, dan latihan pengembangan.
+
+
+      Sebagian
+      aset yang digunakan dalam proyek ini mungkin milik
+
+      pembuatnya masing-masing
+      dan digunakan sesuai lisensinya.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      TERIMA KASIH SUDAH BERMAIN'
+  - key: mainscene.canvas.save.area.death.ui.death.alrt
+    english: YOU ARE DEATH
+    indonesian: KAMU MATI
+  - key: mainscene.canvas.save.area.death.ui.press.any.key
+    english: Press any key to exit
+    indonesian: Tekan tombol apa saja untuk keluar
+  - key: mainscene.canvas.save.area.health.health.text
+    english: health saat ini/ max health
+    indonesian: nyawa saat ini / nyawa maksimal
+  - key: mainscene.canvas.save.area.option.audio.menu.apply.text.tmp
+    english: Apply
+    indonesian: Terapkan
+  - key: mainscene.canvas.save.area.option.audio.menu.default.text.tmp
+    english: Resret to Default
+    indonesian: Kembalikan ke Default
+  - key: mainscene.canvas.save.area.option.audio.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.control.text
+    english: Master Volume
+    indonesian: Volume Utama
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.master.volume.text
+    english: Master Volume
+    indonesian: Volume Utama
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.master.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.audio.language
+    english: Audio Language
+    indonesian: Bahasa Audio
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.audio.language.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.audio.language.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.audio.options.text
+    english: Audio Options
+    indonesian: Opsi Audio
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.mute.when.unfocus
+    english: Mute When Unfocus
+    indonesian: Senyapkan Saat Tidak Fokus
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.mute.when.unfocus.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.mute.when.unfocus.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.speaker.configuration
+    english: Speaker Configuration
+    indonesian: Konfigurasi Speaker
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.speaker.configuration.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.speaker.configuration.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.subtitles
+    english: Subtitles
+    indonesian: Teks Terjemahan
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.subtitles.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.audio.menu.line.audio.option.subtitles.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.ambient.volume.text
+    english: Ambient Volume
+    indonesian: Volume Ambien
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.ambient.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.mixer.text
+    english: Mixer Volume
+    indonesian: Volume Mixer
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.music.volume.text
+    english: Music Volume
+    indonesian: Volume Musik
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.music.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.sfx.volume.text
+    english: SFX Volume
+    indonesian: Volume Efek Suara
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.sfx.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.ui.volume.text
+    english: UI Volume
+    indonesian: Volume UI
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.ui.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.voice.volume.text
+    english: Voice Volume
+    indonesian: Volume Suara
+  - key: mainscene.canvas.save.area.option.audio.menu.line.mixer.voice.volume.text.value.bacround.value.text
+    english: -80 dB
+    indonesian: -80 dB
+  - key: mainscene.canvas.save.area.option.audio.menu.mainmenu.text.tmp
+    english: Back To Main Menu
+    indonesian: Kembali ke Menu Utama
+  - key: mainscene.canvas.save.area.option.audio.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.background.controls.tab.controls.text
+    english: Controls
+    indonesian: Kontrol
+  - key: mainscene.canvas.save.area.option.background.graphics.tab.graphics.text
+    english: Graphics
+    indonesian: Grafis
+  - key: mainscene.canvas.save.area.option.background.settings.tab.settings.text
+    english: Settings
+    indonesian: Pengaturan
+  - key: mainscene.canvas.save.area.option.background.sound.tab.audio.text
+    english: Audio
+    indonesian: Audio
+  - key: mainscene.canvas.save.area.option.control.menu.apply.text.tmp
+    english: Apply
+    indonesian: Terapkan
+  - key: mainscene.canvas.save.area.option.control.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.aim.fire.text
+    english: Fire
+    indonesian: Tembak
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.aim.fire.text.image.text.tmp
+    english: Click Left
+    indonesian: Klik Kiri
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.aim.text
+    english: Aim
+    indonesian: Bidik
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.aim.text.image.text.tmp
+    english: Click Right
+    indonesian: Klik Kanan
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.blocktext
+    english: Block
+    indonesian: Tangkis
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.blocktext.image.text.tmp
+    english: F
+    indonesian: F
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.crawl.text
+    english: Crawl
+    indonesian: Merangkak
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.crawl.text.image.text.tmp
+    english: Z
+    indonesian: Z
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.crouch.text
+    english: Crouch
+    indonesian: Jongkok
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.crouch.text.image.text.tmp
+    english: C
+    indonesian: C
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.inventory.text
+    english: Inventory
+    indonesian: Inventaris
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.inventory.text.image.text.tmp
+    english: I
+    indonesian: I
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.jump.text
+    english: Jump
+    indonesian: Lompat
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.jump.text.image.text.tmp
+    english: Space
+    indonesian: Spasi
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.melee.text
+    english: Melee
+    indonesian: Serangan Jarak Dekat
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.melee.text.image.text.tmp
+    english: V
+    indonesian: V
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.move.text
+    english: Move
+    indonesian: Bergerak
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.move.text.image.text.tmp
+    english: WASD
+    indonesian: WASD
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.picup.text
+    english: Pickup
+    indonesian: Ambil
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.picup.text.image.text.tmp
+    english: T
+    indonesian: T
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.roll.text
+    english: Roll
+    indonesian: Berguling
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.roll.text.image.1.text.tmp
+    english: Q
+    indonesian: Q
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.roll.text.image.text.tmp
+    english: WASD
+    indonesian: WASD
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.setting.menu.text
+    english: Setting Menu
+    indonesian: Menu Pengaturan
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.setting.menu.text.image.text.tmp
+    english: Esc
+    indonesian: Esc
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.use.inventory.text
+    english: Use Item
+    indonesian: Gunakan Item
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.use.inventory.text.image.text.tmp
+    english: U
+    indonesian: U
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.weapon.meleetext
+    english: Weapon Melee
+    indonesian: Melee Senjata
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.weapon.meleetext.image.text.tmp
+    english: B
+    indonesian: B
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.zoom.scope.text
+    english: Zoom
+    indonesian: Perbesar
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.bacround.key.zoom.scope.text.image.text.tmp
+    english: Scroll Mouse
+    indonesian: Gulir Mouse
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.control.text
+    english: Control
+    indonesian: Kontrol
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.default.text.tmp
+    english: Resret to Default
+    indonesian: Kembalikan ke Default
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.invert.mose
+    english: Invert Mose
+    indonesian: Balik Mouse
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.invert.mose.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.invert.mose.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.sensitivity.aim.text
+    english: Sensitivity Aim
+    indonesian: Sensitivitas Bidik
+  - key: mainscene.canvas.save.area.option.control.menu.line.control.sensitivity.text
+    english: Sensitivity
+    indonesian: Sensitivitas
+  - key: mainscene.canvas.save.area.option.control.menu.mainmenu.text.tmp
+    english: Back To Main Menu
+    indonesian: Kembali ke Menu Utama
+  - key: mainscene.canvas.save.area.option.control.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.graphics.menu.apply.text.tmp
+    english: Apply
+    indonesian: Terapkan
+  - key: mainscene.canvas.save.area.option.graphics.menu.information.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.display.text
+    english: Display
+    indonesian: Tampilan
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.full.screen
+    english: Full Screen
+    indonesian: Layar Penuh
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.full.screen.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.full.screen.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.resolution.text
+    english: Resolution
+    indonesian: Resolusi
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.resolution.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.resolution.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.v.sync
+    english: V-Sync
+    indonesian: V-Sync
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.v.sync.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.display.v.sync.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.bloom
+    english: Bloom
+    indonesian: Bloom
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.bloom.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.bloom.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.chromatic
+    english: Chromatic
+    indonesian: Kromatik
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.chromatic.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.chromatic.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.dof
+    english: DOF
+    indonesian: Kedalaman Fokus
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.dof.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.dof.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.film.gain
+    english: Film Gain
+    indonesian: Butiran Film
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.film.gain.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.film.gain.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.motion.blur
+    english: Motion Blur
+    indonesian: Blur Gerakan
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.motion.blur.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.motion.blur.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.post.prosesing.post.prosesing.text
+    english: Post Prosesing
+    indonesian: Pasca-Proses
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.anti.aliasing.text
+    english: Anti-Aliasing
+    indonesian: Anti-Aliasing
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.anti.aliasing.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.anti.aliasing.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.display.text
+    english: Quality
+    indonesian: Kualitas
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.physics.text
+    english: Physics
+    indonesian: Fisika
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.physics.text.togle.background.on
+    english: on
+    indonesian: nyala
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.physics.text.togle.fill.area.fill.off
+    english: off
+    indonesian: mati
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.quality.preset.text
+    english: Quality Preset
+    indonesian: Preset Kualitas
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.quality.preset.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.quality.preset.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.shadow.quality.text
+    english: Shadow Quality
+    indonesian: Kualitas Bayangan
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.shadow.quality.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.shadow.quality.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.texture.quality.text
+    english: Texture Quality
+    indonesian: Kualitas Tekstur
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.texture.quality.text.dropdown.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.line.quality.texture.quality.text.dropdown.template.viewport.content.item.item.label
+    english: Option A
+    indonesian: Opsi A
+  - key: mainscene.canvas.save.area.option.graphics.menu.mainmenu.text.tmp
+    english: Back To Main Menu
+    indonesian: Kembali ke Menu Utama
+  - key: mainscene.canvas.save.area.option.graphics.menu.ram.usage
+    english: Ram Usage
+    indonesian: Penggunaan RAM
+  - key: mainscene.canvas.save.area.option.graphics.menu.ram.usage.slider.vram
+    english: --GB / --GB
+    indonesian: --GB / --GB
+  - key: mainscene.canvas.save.area.option.graphics.menu.select.text
+    english: Text Select
+    indonesian: Info Pilihan
+  - key: mainscene.canvas.save.area.option.graphics.menu.vram.usage
+    english: Vram Usage
+    indonesian: Penggunaan VRAM
+  - key: mainscene.canvas.save.area.option.graphics.menu.vram.usage.slider.vram
+    english: --GB / --GB
+    indonesian: --GB / --GB
+  - key: mainscene.canvas.save.area.panel.informationtab.information.ammoinfogroub.ammo
+    english: Ammo
+    indonesian: Amunisi
+  - key: mainscene.canvas.save.area.panel.informationtab.information.ammoinfogroub.ammo.type
+    english: Ammo Type
+    indonesian: Tipe Amunisi
+  - key: mainscene.canvas.save.area.panel.informationtab.information.ammoinfogroub.caliber
+    english: Caliber
+    indonesian: Kaliber
+  - key: mainscene.canvas.save.area.panel.informationtab.information.ammoinfogroub.stack
+    english: Stack
+    indonesian: Tumpukan
+  - key: mainscene.canvas.save.area.panel.informationtab.information.ammoinfogroub.stack.text
+    english: Manual
+    indonesian: Manual
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.duration
+    english: Duration
+    indonesian: Durasi
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.effect
+    english: Effect
+    indonesian: Efek
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.recovery
+    english: Recovery
+    indonesian: Pemulihan
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.stack
+    english: Stack
+    indonesian: Tumpukan
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.type
+    english: Type
+    indonesian: Tipe
+  - key: mainscene.canvas.save.area.panel.informationtab.information.healinginfogroub.type.text
+    english: Manual
+    indonesian: Manual
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.damage
+    english: Damage
+    indonesian: Kerusakan
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.fire.rate
+    english: Fire Rate
+    indonesian: Laju Tembak
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.magazinesize
+    english: Magazine
+    indonesian: Magazen
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.range
+    english: Range
+    indonesian: Jarak
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.typemachine
+    english: Type Machine
+    indonesian: Mode Tembak
+  - key: mainscene.canvas.save.area.panel.informationtab.information.weaponinfogroub.typemachine.text
+    english: Manual
+    indonesian: Manual
+  - key: menu.play_game
+    english: Play Game
+    indonesian: Mulai Main
+  - key: runtime.option.graphics
+    english: Graphics
+    indonesian: Grafis
+  - key: runtime.option.controls
+    english: Controls
+    indonesian: Kontrol
+  - key: runtime.option.audio
+    english: Audio
+    indonesian: Audio
+  - key: runtime.option.graphics.info
+    english: Select a graphics setting to see what it changes.
+    indonesian: Pilih pengaturan grafis untuk melihat apa yang akan diubah.
+  - key: runtime.option.controls.info
+    english: View and adjust camera sensitivity, aim sensitivity, mouse inversion, and gameplay input references.
+    indonesian: Lihat dan atur sensitivitas kamera, sensitivitas bidik, pembalikan mouse, dan referensi input gameplay.
+  - key: runtime.option.audio.info
+    english: Adjust master, music, and sound effect volume when the audio controls are available.
+    indonesian: Atur volume master, musik, dan efek suara saat kontrol audio tersedia.
+  - key: runtime.option.audio.unavailable
+    english: Audio controls are not available yet. Create an Audio menu or Sound menu under Option to enable this tab.
+    indonesian: Kontrol audio belum tersedia. Buat menu Audio atau Sound di dalam Option untuk mengaktifkan tab ini.
+  - key: runtime.confirm.back.title
+    english: Back to Main Menu?
+    indonesian: Kembali ke Menu Utama?
+  - key: runtime.confirm.back.info
+    english: Current gameplay will be left.
+    indonesian: Gameplay saat ini akan ditinggalkan.
+  - key: runtime.confirm.back.button
+    english: Back to Main Menu
+    indonesian: Kembali ke Menu Utama
+  - key: runtime.confirm.stay.button
+    english: Stay
+    indonesian: Tetap di Sini
+  - key: runtime.option.display
+    english: Display
+    indonesian: Tampilan
+  - key: runtime.option.display.info
+    english: Screen output settings such as resolution, fullscreen mode, and V-Sync.
+    indonesian: Pengaturan tampilan layar seperti resolusi, mode layar penuh, dan V-Sync.
+  - key: runtime.option.resolution
+    english: Resolution
+    indonesian: Resolusi
+  - key: runtime.option.resolution.info
+    english: Changes the game output resolution. Higher resolutions look sharper but cost more GPU performance.
+    indonesian: Mengubah resolusi output game. Resolusi lebih tinggi terlihat lebih tajam tetapi memakai performa GPU lebih besar.
+  - key: runtime.option.fullscreen
+    english: Full Screen
+    indonesian: Layar Penuh
+  - key: runtime.option.fullscreen.info
+    english: Switches between fullscreen window mode and windowed mode. Slider value 0 is On, 1 is Off.
+    indonesian: Mengganti antara mode layar penuh dan mode jendela. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.vsync
+    english: V-Sync
+    indonesian: V-Sync
+  - key: runtime.option.vsync.info
+    english: Synchronizes rendering with the display refresh rate to reduce tearing. Slider value 0 is On, 1 is Off.
+    indonesian: Menyinkronkan render dengan refresh rate layar untuk mengurangi tearing. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.vegetation.physics
+    english: Vegetation Physics
+    indonesian: Fisika Vegetasi
+  - key: runtime.option.vegetation.physics.info
+    english: Controls foliage wind animation from Wind Zone and CTI shader wind. Turning it off freezes tree and billboard wind movement. Slider value 0 is On, 1 is Off.
+    indonesian: Mengatur animasi angin dedaunan dari Wind Zone dan shader wind CTI. Jika dimatikan, gerakan angin pohon dan billboard akan berhenti. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.quality
+    english: Quality
+    indonesian: Kualitas
+  - key: runtime.option.quality.info
+    english: Rendering quality settings that affect visual detail and performance.
+    indonesian: Pengaturan kualitas render yang memengaruhi detail visual dan performa.
+  - key: runtime.option.quality.preset
+    english: Quality Preset
+    indonesian: Preset Kualitas
+  - key: runtime.option.quality.preset.info
+    english: Applies one of Unity's project quality presets.
+    indonesian: Menerapkan salah satu preset kualitas proyek Unity.
+  - key: runtime.option.texture.quality
+    english: Texture Quality
+    indonesian: Kualitas Tekstur
+  - key: runtime.option.texture.quality.info
+    english: Controls texture mipmap quality. Lower settings reduce memory usage and texture sharpness.
+    indonesian: Mengatur kualitas mipmap tekstur. Pengaturan lebih rendah mengurangi penggunaan memori dan ketajaman tekstur.
+  - key: runtime.option.shadow.quality
+    english: Shadow Quality
+    indonesian: Kualitas Bayangan
+  - key: runtime.option.shadow.quality.info
+    english: Controls shadow rendering. Higher shadow quality improves depth but costs GPU performance.
+    indonesian: Mengatur render bayangan. Kualitas bayangan lebih tinggi meningkatkan kedalaman visual tetapi memakai performa GPU lebih besar.
+  - key: runtime.option.anti.aliasing
+    english: Anti-Aliasing
+    indonesian: Anti-Aliasing
+  - key: runtime.option.anti.aliasing.info
+    english: Reduces jagged edges. Unsupported methods will fall back to a supported option.
+    indonesian: Mengurangi tepi bergerigi. Metode yang tidak didukung akan kembali ke opsi yang tersedia.
+  - key: runtime.option.post.processing
+    english: Post Processing
+    indonesian: Post Processing
+  - key: runtime.option.post.processing.info
+    english: Camera effects that change the final rendered image.
+    indonesian: Efek kamera yang mengubah hasil akhir gambar.
+  - key: runtime.option.bloom
+    english: Bloom
+    indonesian: Bloom
+  - key: runtime.option.bloom.info
+    english: Adds glow around bright areas. Slider value 0 is On, 1 is Off.
+    indonesian: Menambahkan cahaya di sekitar area terang. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.motion.blur
+    english: Motion Blur
+    indonesian: Motion Blur
+  - key: runtime.option.motion.blur.info
+    english: Blends fast camera or object movement to create a smoother motion look. Slider value 0 is On, 1 is Off.
+    indonesian: Membaurkan gerakan kamera atau objek yang cepat agar terlihat lebih halus. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.depth.of.field
+    english: Depth Of Field
+    indonesian: Depth Of Field
+  - key: runtime.option.depth.of.field.info
+    english: Blurs areas outside the focus range for a camera lens effect. Slider value 0 is On, 1 is Off.
+    indonesian: Memburamkan area di luar fokus untuk efek lensa kamera. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.chromatic.aberration
+    english: Chromatic Aberration
+    indonesian: Chromatic Aberration
+  - key: runtime.option.chromatic.aberration.info
+    english: Adds subtle color fringing near image edges. Slider value 0 is On, 1 is Off.
+    indonesian: Menambahkan pinggiran warna halus di dekat tepi gambar. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.option.film.grain
+    english: Film Grain
+    indonesian: Film Grain
+  - key: runtime.option.film.grain.info
+    english: Adds a grain/noise overlay for a cinematic texture. Slider value 0 is On, 1 is Off.
+    indonesian: Menambahkan lapisan grain/noise untuk tekstur sinematik. Nilai slider 0 berarti On, 1 berarti Off.
+  - key: runtime.dropdown.off
+    english: Off
+    indonesian: Mati
+  - key: runtime.dropdown.hard.shadows
+    english: Hard Shadows
+    indonesian: Bayangan Keras
+  - key: runtime.dropdown.all.shadows
+    english: All Shadows
+    indonesian: Semua Bayangan
+  - key: runtime.dropdown.full.resolution
+    english: Full Resolution
+    indonesian: Resolusi Penuh
+  - key: runtime.dropdown.half.resolution
+    english: Half Resolution
+    indonesian: Setengah Resolusi
+  - key: runtime.dropdown.quarter.resolution
+    english: Quarter Resolution
+    indonesian: Seperempat Resolusi
+  - key: runtime.dropdown.eighth.resolution
+    english: Eighth Resolution
+    indonesian: Seperdelapan Resolusi
+  - key: runtime.dropdown.low
+    english: Low
+    indonesian: Rendah
+  - key: runtime.dropdown.medium
+    english: Medium
+    indonesian: Sedang
+  - key: runtime.dropdown.high
+    english: High
+    indonesian: Tinggi
+  - key: runtime.dropdown.ultra
+    english: Ultra
+    indonesian: Ultra
+  - key: runtime.dropdown.custom
+    english: Custom
+    indonesian: Kustom
+  - key: runtime.dropdown.default
+    english: Default
+    indonesian: Default
+  - key: runtime.dropdown.headphones
+    english: Headphones
+    indonesian: Headphone
+  - key: runtime.dropdown.speakers
+    english: Speakers
+    indonesian: Speaker
+  - key: runtime.dropdown.night.mode
+    english: Night Mode
+    indonesian: Mode Malam
+  - key: runtime.dropdown.english
+    english: English
+    indonesian: Inggris
+  - key: runtime.dropdown.indonesian
+    english: Indonesian
+    indonesian: Indonesia
+  - key: runtime.dropdown.mono
+    english: Mono
+    indonesian: Mono
+  - key: runtime.dropdown.stereo
+    english: Stereo
+    indonesian: Stereo
+  - key: runtime.dropdown.quad
+    english: Quad
+    indonesian: Quad
+  - key: runtime.dropdown.surround.51
+    english: 5.1 Surround
+    indonesian: 5.1 Surround
+  - key: runtime.dropdown.surround.71
+    english: 7.1 Surround
+    indonesian: 7.1 Surround
+  - key: runtime.dropdown.prologic
+    english: Prologic
+    indonesian: Prologic
+  - key: runtime.boss.warning
+    english: 'WARNING: BOSS INCOMING'
+    indonesian: 'PERINGATAN: BOSS DATANG'
+  - key: runtime.boss.mission.clear
+    english: MISSION CLEAR
+    indonesian: MISI SELESAI
+  - key: runtime.credit.press.any.button
+    english: PRESS ANY BUTTON TO BACK MAIN MENU
+    indonesian: TEKAN TOMBOL APA PUN UNTUK KEMBALI KE MENU UTAMA
+  - key: runtime.credit.default.text
+    english: |-
+      THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+      Created by Ikbal Gumilar
+
+      Thanks for playing
+    indonesian: |-
+      THIRD-PERSON SHOOTERS PROTOTYPE GAME
+
+      Dibuat oleh Ikbal Gumilar
+
+      Terima kasih sudah bermain
+  - key: runtime.inventory.full
+    english: Inventory Full
+    indonesian: Inventory Penuh
+  - key: runtime.inventory.use.healing
+    english: 'Use Healing Item: U'
+    indonesian: 'Gunakan Item Healing: U'
+  - key: runtime.inventory.no.healing
+    english: No Healing Item
+    indonesian: Tidak Ada Item Healing
+  - key: runtime.inventory.use
+    english: Use
+    indonesian: Gunakan
+  - key: runtime.inventory.close
+    english: Close
+    indonesian: Tutup
+  - key: runtime.inventory.used.item
+    english: Used {0}
+    indonesian: Menggunakan {0}
+  - key: runtime.inventory.pickup.format.id
+    english: '{0} - Ambil {1}'
+    indonesian: '{0} - Ambil {1}'
+  - key: runtime.inventory.pickup.format.en
+    english: '{0} - Take {1}'
+    indonesian: '{0} - Ambil {1}'
+  - key: runtime.item.inventory.item
+    english: Inventory Item
+    indonesian: Item Inventory
+  - key: runtime.item.bandage
+    english: Bandage
+    indonesian: Perban
+  - key: runtime.item.medkit
+    english: Medkit
+    indonesian: Kotak Medis
+  - key: runtime.item.medical.spray
+    english: Medical Spray
+    indonesian: Semprotan Medis
+  - key: runtime.item.energy.drink
+    english: Energy Drink
+    indonesian: Minuman Energi
+  - key: runtime.item.antidote
+    english: Antidote
+    indonesian: Penawar Racun
+  - key: runtime.stealth.prompt.id
+    english: Tekan B - Stealth Melee
+    indonesian: Tekan B - Stealth Melee
+  - key: runtime.stealth.prompt.en
+    english: Press B - Stealth Melee
+    indonesian: Tekan B - Stealth Melee
